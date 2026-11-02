@@ -23,3 +23,11 @@
 - Perf: RAF loop paused when tab hidden, dt clamped 1/30s, adaptive resolution 0.5–1× (<50fps degrade), touch DPR cap 1.5, shadow SDF skipped far from liquid.
 - Headless FPS (SwiftShader CPU, no GPU): desktop 4.3 / mobile 3.0 — not representative; verify on a real device.
 - `npm run build` ✅ / motion screenshots desktop + mobile ✅
+
+## 2026-11-02 · Step 4 — Pointer interaction
+- `pointer.ts`: mouse hover / touch drag, smoothed velocity, tap flag, speed cap 3/s (synthetic ~1ms events spiked velocity).
+- Modes: attract / repel / swirl radial-tangential force + stir along pointer motion; tap = extra impulse. Drip sheds up to 4 droplets that ooze back.
+- Shader BLOB_COUNT = 12 + 4 droplets. Canvas `touch-action: none`, logo `pointer-events: none`.
+- Verified (headless): attract pulls center ball, repel pushes it into right column.
+- Known: drip droplets spawn but merge back immediately (MERGE_K 0.28 > droplet gap) — not visible as separate drops.
+- `npm run build` ✅

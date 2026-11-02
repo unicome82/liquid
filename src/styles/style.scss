@@ -53,6 +53,11 @@ body {
     height: 100%;
   }
 
+  .canvas {
+    // Let drags drive the liquid instead of scrolling or zooming the page
+    touch-action: none;
+  }
+
   .fallback {
     background: linear-gradient(135deg, $color-sky, $color-butter 45%, $color-peach 70%, $color-pink);
   }
@@ -63,6 +68,8 @@ body {
     left: $space-md;
     z-index: $z-ui;
     font-family: $font-display;
+    // Decorative overlay; pointer input should reach the liquid beneath
+    pointer-events: none;
     font-size: $font-size-logo;
     font-weight: $font-weight-bold;
     letter-spacing: $letter-spacing-logo;

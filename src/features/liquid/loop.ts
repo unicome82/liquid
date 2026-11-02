@@ -1,5 +1,6 @@
 import { INTENSITY_RANGE, type LiquidSettings } from '../../shared/settings';
 import { LiquidSimulation } from './physics';
+import { PointerTracker } from './pointer';
 import { AdaptiveQuality } from './quality';
 import { createLiquidRenderer } from './renderer';
 import { buildScene, type Scene } from './scene';
@@ -24,6 +25,7 @@ export function startLiquidLoop(
 
   const simulation = new LiquidSimulation();
   const quality = new AdaptiveQuality();
+  const pointer = new PointerTracker(canvas);
   let frameId = 0;
   let lastTime = 0;
   let layoutKey = '';
@@ -43,14 +45,15 @@ export function startLiquidLoop(
 
     if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
 
-    const { amount, intensity } = getSettings();
+    const { amount, intensity, mode } = getSettings();
+    const dt = Math.min(frameMs / MS_PER_SECOND, MAX_STEP_SECONDS);
     const aspect = canvas.clientWidth / canvas.clientHeight;
     const normalizedIntensity =
       (intensity - INTENSITY_RANGE.min) / (INTENSITY_RANGE.max - INTENSITY_RANGE.min);
 
     renderer.resize(quality.scale);
     syncLayout(aspect, amount);
-    simulation.step(Math.min(frameMs / MS_PER_SECOND, MAX_STEP_SECONDS), aspect, normalizedIntensity);
+    simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
     renderer.render(simulation.getBlobs(), scene.palette);
   };
 
@@ -67,6 +70,7 @@ export function startLiquidLoop(
   return () => {
     stop();
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    pointer.dispose();
     renderer.dispose();
   };
 }
