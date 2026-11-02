@@ -1,0 +1,14 @@
+@use 'variables' as *;
+
+@mixin mq($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin full-screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+}

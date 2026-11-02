@@ -1,0 +1,37 @@
+// Colors — sampled from the reference image
+$color-sky: #4fb3f6;
+$color-butter: #fbf3c4;
+$color-peach: #ffc58a;
+$color-pink: #f79ac9;
+$color-lavender: #c9a2f2;
+$color-cream: #fdf9ee;
+$color-ink: #2b2b3a;
+
+$color-bg: $color-cream;
+$color-text: $color-ink;
+
+// Fonts
+$font-display: 'Syne', sans-serif;
+$font-weight-bold: 800;
+$font-size-logo: 1.5rem;
+$font-size-logo-lg: 2rem;
+$letter-spacing-logo: 0.12em;
+
+// Spacing
+$space-xs: 0.5rem;
+$space-sm: 1rem;
+$space-md: 1.5rem;
+$space-lg: 2.5rem;
+
+// Radii
+$radius-sm: 0.5rem;
+$radius-md: 1rem;
+$radius-full: 999px;
+
+// Breakpoints
+$bp-tablet: 768px;
+$bp-desktop: 1200px;
+
+// Layers
+$z-canvas: 0;
+$z-ui: 10;

@@ -1,0 +1,37 @@
+@use 'reset';
+@use 'variables' as *;
+@use 'mixins' as *;
+
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: $color-bg;
+  color: $color-text;
+  font-family: $font-display;
+  -webkit-font-smoothing: antialiased;
+}
+
+.liquid {
+  @include full-screen;
+  overflow: hidden;
+
+  .logo {
+    position: absolute;
+    top: $space-md;
+    left: $space-md;
+    z-index: $z-ui;
+    font-size: $font-size-logo;
+    font-weight: $font-weight-bold;
+    letter-spacing: $letter-spacing-logo;
+
+    @include mq($bp-tablet) {
+      top: $space-lg;
+      left: $space-lg;
+      font-size: $font-size-logo-lg;
+    }
+  }
+}
