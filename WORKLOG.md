@@ -78,3 +78,4 @@
 - **Mobile quality**: touch devices start at 0.7× and may drop to 0.4× (desktop 1× / 0.5×). Headless SwiftShader drops straight to the floor (looks soft) — check sharpness/FPS on a real phone.
 - **Reduced motion** (`prefers-reduced-motion`, live): idle drift + radius pulse frozen (touch still moves liquid); CSS transitions/animations off.
 - **A11y**: focus rings hidden everywhere (by request). Backdrop copy given to screen readers as visually-hidden `.copy`. Fixed: desktop open → focus never reached the close button (visibility transition started at hidden) → visibility flips at once on open, delayed on close. Verified Tab → Enter → focus on Close → Esc → focus back on toggle, desktop + mobile(reduced) ✅ cut gesture screenshot ✅ no console errors, `npm run build` ✅
+- **Deploy**: GitHub Pages workflow (`.github/workflows/deploy.yml`) — builds with `--base=./` on push to main.
