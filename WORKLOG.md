@@ -16,3 +16,10 @@
 - Amount live (4–12, BLOB_COUNT = AMOUNT_RANGE.max). Intensity / Mode stored only — wired in steps 3–4.
 - Known: at 12 blobs (desktop) MERGE_K 0.28 fuses most blobs into one mass; revisit with motion.
 - `npm run build` ✅ / screenshots open + closed, desktop + mobile ✅
+
+## 2026-11-02 · Step 3 — Idle motion + performance
+- Spring/damping sim (`physics.ts`), intensity → stiffness, damping ratio (1.4 honey → 0.6 wobbly), drift speed.
+- Amount change: blobs grow in / shrink out; aspect switch: blobs flow to new layout. Blobs grow from 0 on load (doubles as intro).
+- Perf: RAF loop paused when tab hidden, dt clamped 1/30s, adaptive resolution 0.5–1× (<50fps degrade), touch DPR cap 1.5, shadow SDF skipped far from liquid.
+- Headless FPS (SwiftShader CPU, no GPU): desktop 4.3 / mobile 3.0 — not representative; verify on a real device.
+- `npm run build` ✅ / motion screenshots desktop + mobile ✅

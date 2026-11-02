@@ -21,13 +21,15 @@ export interface Palette {
 }
 
 export interface LiquidRenderer {
-  resize: () => void;
+  /** @param scale 0–1 resolution multiplier from adaptive quality */
+  resize: (scale: number) => void;
   render: (blobs: Blob[], palette: Palette) => void;
   dispose: () => void;
 }
 
-// Caps fill-rate cost on high-density phones
-const MAX_DPR = 2;
+// Caps fill-rate cost; touch devices get a lower cap since their GPUs are weaker
+const MAX_DPR_DESKTOP = 2;
+const MAX_DPR_TOUCH = 1.5;
 // Parks unused blob slots far off-screen so they never contribute
 const OFFSCREEN = 1e4;
 const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
@@ -96,8 +98,10 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const blobData = new Float32Array(BLOB_COUNT * STRIDE);
   const colorData = new Float32Array(BLOB_COUNT * STRIDE);
 
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  const maxDpr = window.matchMedia('(pointer: coarse)').matches ? MAX_DPR_TOUCH : MAX_DPR_DESKTOP;
+
+  function resize(scale: number) {
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr) * scale;
     const width = Math.round(canvas.clientWidth * dpr);
     const height = Math.round(canvas.clientHeight * dpr);
     if (canvas.width === width && canvas.height === height) return;

@@ -87,10 +87,14 @@ vec3 liquidColor(vec2 p) {
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
 }
 
-vec3 background(vec2 uv, vec2 p) {
+vec3 background(vec2 uv, vec2 p, float d) {
   vec3 bg = mix(uBgBottom, uBgTop, uv.y);
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
   bg = mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
+
+  // Beyond this distance the offset shadow is fully transparent, so skip its SDF pass
+  float shadowReach = SHADOW_BLUR + length(SHADOW_OFFSET);
+  if (d > shadowReach) return bg;
 
   float shadowD = sceneSdf(p - SHADOW_OFFSET);
   float shadow = 1.0 - smoothstep(-SHADOW_BLUR * 0.5, SHADOW_BLUR, shadowD);
@@ -124,8 +128,8 @@ void main() {
   vec2 uv = gl_FragCoord.xy / uResolution;
   vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) * px;
 
-  vec3 bg = background(uv, p);
   float d = sceneSdf(p);
+  vec3 bg = background(uv, p, d);
   float coverage = 1.0 - smoothstep(-px, px, d);
 
   if (coverage <= 0.0) {
