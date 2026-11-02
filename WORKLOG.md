@@ -63,3 +63,4 @@
 - **Chrome layered/brighter**: env facing 0.9 (more white) + 5 stacked horizontal dark bands → nested contour lines along rims. Screenshots Water/Silver/Gold desktop + mobile ✅ `npm run build` ✅
 - Fix: panel blur never applied — mixin wrote `backdrop-filter` + `-webkit-backdrop-filter`, the minifier kept only the prefixed one (Chrome ignores it). Now unprefixed only; build emits both. Computed `backdrop-filter: blur(24px)` ✅
 - Chrome highlights whiten (env 0.85→1.2 blends tint → white) so gold's bright areas read white. Screenshots Gold/Silver desktop + mobile ✅ `npm run build` ✅
+- Panel blur 24px → 8px. `npm run build` ✅
