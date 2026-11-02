@@ -1,14 +1,12 @@
-import { COLOR_THEMES, type ColorTheme } from '../../shared/settings';
+import { COLOR_THEMES, isMetalTheme, type ColorTheme } from '../../shared/settings';
 import type { Blob, Palette, Rgb } from './renderer';
 
-type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream';
+type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream' | 'night' | 'night-soft';
 
 // Matches the length of each theme list in `$liquid-themes`
 const THEME_COLOR_COUNT = 6;
-// Metallic themes swap the soft liquid shading for a mirror-like reflection
-const METALLIC_THEMES: ColorTheme[] = ['silver', 'gold'];
 // Single-hue themes skip the butter lift between colours, which would tint them yellow
-const MONO_THEMES: ColorTheme[] = ['white', 'silver', 'gold'];
+const MONO_THEMES: ColorTheme[] = ['water', 'silver', 'gold'];
 
 interface BlobSpec {
   /** Fraction of the viewport's shorter side */
@@ -51,6 +49,9 @@ const PORTRAIT_BLOBS: BlobSpec[] = [
 // Representative screen shapes, used only to judge spacing while scattering
 const LANDSCAPE_ASPECT = 16 / 10;
 const PORTRAIT_ASPECT = 9 / 19.5;
+// Keeps very wide or tall windows from blowing blobs up or shrinking them away
+const FIT_SCALE_MIN = 0.75;
+const FIT_SCALE_MAX = 1.5;
 /** Lets blobs sit partly off-screen, like the reference's cropped edges */
 const EDGE_OVERFLOW = 0.05;
 /** More candidates = more even spread (best-candidate sampling) */
@@ -135,6 +136,19 @@ function scatter(specs: BlobSpec[], aspect: number, colorSlots: number[]): Place
   return placed;
 }
 
+const longOverShort = (aspect: number) => Math.max(aspect, 1 / aspect);
+
+/**
+ * Radii are fractions of the short side, so widening a window alone wouldn't grow them.
+ * Scaling by sqrt(long / short) makes blob size follow the viewport's area instead,
+ * normalised so the reference screen shapes keep their designed sizes.
+ */
+export function fitScale(aspect: number): number {
+  const reference = aspect < 1 ? PORTRAIT_ASPECT : LANDSCAPE_ASPECT;
+  const scale = Math.sqrt(longOverShort(aspect) / longOverShort(reference));
+  return Math.min(Math.max(scale, FIT_SCALE_MIN), FIT_SCALE_MAX);
+}
+
 export interface Scene {
   getPalette: (theme: ColorTheme) => Palette;
   getBlobs: (aspect: number, count: number, theme: ColorTheme) => Blob[];
@@ -155,11 +169,20 @@ export function buildScene(): Scene {
     shadowTint: readColorToken('lavender'),
     transition: readColorToken('butter'),
   };
+  // Chrome needs a dark stage so its reflections read; the drop shadow becomes a dark halo
+  const darkPalette = {
+    bgTop: readColorToken('night-soft'),
+    bgBottom: readColorToken('night'),
+    bgAccent: readColorToken('night-soft'),
+    shadowTint: readColorToken('night'),
+    transition: basePalette.transition,
+  };
   return {
     getPalette: (theme) => ({
-      ...basePalette,
+      ...(isMetalTheme(theme) ? darkPalette : basePalette),
       transition: MONO_THEMES.includes(theme) ? themeColors[theme][0] : basePalette.transition,
-      metal: METALLIC_THEMES.includes(theme) ? 1 : 0,
+      metal: isMetalTheme(theme) ? 1 : 0,
+      water: theme === 'water' ? 1 : 0,
     }),
     getBlobs: (aspect, count, theme) =>
       (aspect < 1 ? portrait : landscape)

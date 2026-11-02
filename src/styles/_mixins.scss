@@ -20,7 +20,7 @@
 }
 
 @mixin glass {
-  background: $color-panel-bg;
+  background: $ui-glass;
   backdrop-filter: blur($blur-panel);
   -webkit-backdrop-filter: blur($blur-panel);
   box-shadow: $shadow-panel;

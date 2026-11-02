@@ -28,7 +28,8 @@ uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
 uniform vec3 uShadowTint;
 uniform vec3 uTransition;
-uniform float uMetal;              // 0 = soft liquid, 1 = mirror-like metal
+uniform float uMetal;              // 0–1 blend toward chrome
+uniform float uWater;              // 0–1 blend toward clear water
 
 // Larger k = fatter necks where blobs meet, which reads as viscous
 const float MERGE_K = 0.28;
@@ -55,22 +56,43 @@ const float SHEEN_STRENGTH = 0.12;
 const float RIM_STRENGTH = 0.45;
 const float NORMAL_SAMPLE_PX = 2.0;
 
-// Fake studio environment for metal: bright softbox above, dark horizon band, dim floor
-const float ENV_FLOOR = 0.55;
-const float ENV_SKY = 1.25;
-const float ENV_HORIZON_DARK = 0.45;
-// Softens the crease where overlapping metal domes meet
-const float METAL_BLEND = 0.1;
-const float METAL_SPECULAR_POWER = 40.0;
-const float METAL_SPECULAR_STRENGTH = 0.9;
+// Chrome reflects a fake studio: bright sky, dark horizon band, dim floor, one softbox
+const float ENV_FACING = 0.55;
+const float ENV_SKY = 0.4;
+const float ENV_FLOOR = 0.3;
+const float ENV_HORIZON_Y = -0.3;
+const float ENV_HORIZON_WIDTH = 0.1;
+const float ENV_HORIZON_DARK = 0.92;
+const vec2 ENV_SOFTBOX = vec2(-0.45, 0.55);
+const float ENV_SOFTBOX_SHARPNESS = 18.0;
+const float ENV_SOFTBOX_STRENGTH = 1.3;
+const float METAL_EDGE_LIFT = 0.12;
+// Second, softer band left of centre so wide surfaces don't read as one flat grey
+const float ENV_STREAK_X = -0.35;
+const float ENV_STREAK_WIDTH = 0.4;
+const float ENV_STREAK_DARK = 0.3;
 
-// Brightness the metal would reflect in direction r (r.z = 1 faces the viewer)
+// Water bends the background through the drop and catches a sharp highlight
+// Negative: a drop acts like a lens and flips what is behind it
+const float WATER_REFRACTION = -0.25;
+const float WATER_TINT = 0.5;
+const float WATER_CAUSTIC = 0.18;
+const float WATER_EDGE_DARK = 0.35;
+const float WATER_RIM_LIGHT = 0.35;
+const float WATER_SPECULAR_POWER = 220.0;
+const float WATER_SPECULAR_STRENGTH = 1.1;
+
+// Brightness reflected along r (r.z > 0 points back toward the viewer)
 float envLight(vec3 r) {
-  float tilt = length(r.xy);
-  float facing = mix(ENV_FLOOR, ENV_SKY, r.y * 0.5 + 0.5);
-  // Dark ring where the reflection grazes the horizon, the classic chrome edge band
-  float band = smoothstep(0.25, 0.6, tilt) * (1.0 - smoothstep(0.7, 0.95, tilt));
-  return facing * (1.0 - band * ENV_HORIZON_DARK);
+  float v = ENV_FACING + ENV_SKY * smoothstep(0.0, 0.8, r.y);
+  v = mix(v, ENV_FLOOR, smoothstep(-0.1, -0.8, r.y));
+  float band = (r.y - ENV_HORIZON_Y) / ENV_HORIZON_WIDTH;
+  v *= 1.0 - ENV_HORIZON_DARK * exp(-band * band);
+  float streak = (r.x - ENV_STREAK_X) / ENV_STREAK_WIDTH;
+  v *= 1.0 - ENV_STREAK_DARK * exp(-streak * streak);
+  vec2 toBox = r.xy - ENV_SOFTBOX;
+  v += ENV_SOFTBOX_STRENGTH * exp(-dot(toBox, toBox) * ENV_SOFTBOX_SHARPNESS);
+  return v;
 }
 
 float smin(float a, float b, float k) {
@@ -122,17 +144,25 @@ float heightFromSdf(float d) {
   return sqrt(1.0 - t * t) * BEVEL;
 }
 
-// Metal needs full domes: a deep SDF bevel peaks in a cone at each blob centre,
-// so each blob contributes a true hemisphere instead; the bevel still shapes necks and cuts
-float metalHeight(vec2 p) {
-  float domes = 0.0;
+// Blob radius around p, blended like the colours, for the dome profile below
+float localRadius(vec2 p) {
+  float sum = 0.0;
+  float total = 0.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    vec2 q = p - uBlobs[i].xy;
-    float r = uBlobs[i].z;
-    domes = smax(domes, sqrt(max(r * r - dot(q, q), 0.0)), METAL_BLEND);
+    float w = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
+    sum += uBlobs[i].z * w;
+    total += w;
   }
-  // Blended separately: smoothing domes against the rim bevel raised a ring at every edge
-  return max(domes, heightFromSdf(sceneSdf(p)));
+  return sum / max(total, 1e-6);
+}
+
+// Full rounded body for chrome and water: for a lone circle this is an exact hemisphere
+// (sqrt(r² - |q|²) rewritten in terms of the SDF), and it stays smooth across necks.
+// A plain deep bevel instead peaks in a cone at each centre.
+float domeHeight(vec2 p) {
+  float r = localRadius(p);
+  float d = max(sceneSdf(p), -r);
+  return sqrt(max(-d * (2.0 * r + d), 0.0));
 }
 
 vec3 liquidColor(vec2 p) {
@@ -149,10 +179,14 @@ vec3 liquidColor(vec2 p) {
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
 }
 
-vec3 background(vec2 uv, vec2 p, float d) {
+vec3 backdrop(vec2 uv) {
   vec3 bg = mix(uBgBottom, uBgTop, uv.y);
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
-  bg = mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
+  return mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
+}
+
+vec3 background(vec2 uv, vec2 p, float d) {
+  vec3 bg = backdrop(uv);
 
   // Beyond this distance the offset shadow is fully transparent, so skip its SDF pass
   float shadowReach = SHADOW_BLUR + length(SHADOW_OFFSET);
@@ -163,19 +197,37 @@ vec3 background(vec2 uv, vec2 p, float d) {
   return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
 }
 
-vec3 shadeLiquid(vec2 p, float d, float px) {
+vec3 domeNormal(vec2 p, float eps) {
+  float h = domeHeight(p);
+  float hx = domeHeight(p + vec2(eps, 0.0));
+  float hy = domeHeight(p + vec2(0.0, eps));
+  return normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
+}
+
+vec3 shadeChrome(vec3 base, vec3 n) {
+  vec3 r = reflect(vec3(0.0, 0.0, -1.0), n);
+  vec3 col = base * envLight(r);
+  // Grazing angles reflect more, so rims brighten toward white
+  return col + (1.0 - n.z) * METAL_EDGE_LIFT;
+}
+
+vec3 shadeWater(vec2 uv, vec3 tint, vec3 n, vec3 l, vec3 halfVec) {
+  vec3 seen = backdrop(uv + n.xy * WATER_REFRACTION) * mix(vec3(1.0), tint, WATER_TINT);
+  float edge = 1.0 - n.z;
+  // Thin dark outline where light reflects away at the drop's edge
+  seen *= 1.0 - smoothstep(0.4, 0.95, edge) * WATER_EDGE_DARK;
+  // Light focused through the drop lands on the side opposite the highlight
+  seen += max(dot(normalize(n.xy + 1e-4), -l.xy), 0.0) * edge * WATER_CAUSTIC;
+  seen += pow(edge, 3.0) * WATER_RIM_LIGHT;
+  return seen + pow(max(dot(n, halfVec), 0.0), WATER_SPECULAR_POWER) * WATER_SPECULAR_STRENGTH;
+}
+
+vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
   float h = heightFromSdf(d);
   float hx = heightFromSdf(sceneSdf(p + vec2(eps, 0.0)));
   float hy = heightFromSdf(sceneSdf(p + vec2(0.0, eps)));
   vec3 n = normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
-  vec3 metalN = n;
-  if (uMetal > 0.0) {
-    float mh = metalHeight(p);
-    float mx = metalHeight(p + vec2(eps, 0.0));
-    float my = metalHeight(p + vec2(0.0, eps));
-    metalN = normalize(vec3(-(mx - mh) / eps, -(my - mh) / eps, 1.0));
-  }
 
   vec3 l = normalize(LIGHT_DIR);
   vec3 halfVec = normalize(l + vec3(0.0, 0.0, 1.0));
@@ -189,12 +241,11 @@ vec3 shadeLiquid(vec2 p, float d, float px) {
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
   col += pow(nh, SPECULAR_POWER) * SPECULAR_STRENGTH;
 
-  // Metal tints its reflection with the base colour instead of being lit diffusely
-  vec3 r = reflect(vec3(0.0, 0.0, -1.0), metalN);
-  vec3 metal = base * envLight(-r);
-  float metalNh = max(dot(metalN, halfVec), 0.0);
-  metal += mix(base, vec3(1.0), 0.5) * pow(metalNh, METAL_SPECULAR_POWER) * METAL_SPECULAR_STRENGTH;
-  return mix(col, metal, uMetal);
+  // Only pay for the dome normal when a material actually uses it
+  if (uMetal + uWater <= 0.0) return col;
+  vec3 dome = domeNormal(p, eps);
+  col = mix(col, shadeChrome(base, dome), uMetal);
+  return mix(col, shadeWater(uv, base, dome, l, halfVec), uWater);
 }
 
 void main() {
@@ -212,6 +263,6 @@ void main() {
     return;
   }
 
-  gl_FragColor = vec4(mix(bg, shadeLiquid(p, d, px), coverage), 1.0);
+  gl_FragColor = vec4(mix(bg, shadeLiquid(uv, p, d, px), coverage), 1.0);
 }
 `;

@@ -1,5 +1,5 @@
 export type InteractionMode = 'attract' | 'repel' | 'cut' | 'stretch';
-export type ColorTheme = 'pastel' | 'vivid' | 'white' | 'silver' | 'gold';
+export type ColorTheme = 'pastel' | 'vivid' | 'water' | 'silver' | 'gold';
 
 export interface LiquidSettings {
   /** Cursor force + inverse viscosity, in percent */
@@ -40,7 +40,10 @@ export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: s
 export const COLOR_THEMES: { value: ColorTheme; label: string }[] = [
   { value: 'pastel', label: 'Pastel' },
   { value: 'vivid', label: 'Vivid' },
-  { value: 'white', label: 'White' },
+  { value: 'water', label: 'Water' },
   { value: 'silver', label: 'Silver' },
   { value: 'gold', label: 'Gold' },
 ];
+
+/** Chrome themes, which sit on a dark background */
+export const isMetalTheme = (theme: ColorTheme) => theme === 'silver' || theme === 'gold';

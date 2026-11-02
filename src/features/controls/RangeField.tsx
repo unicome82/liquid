@@ -15,15 +15,9 @@ function RangeField({ label, value, range, unit = '', onChange }: RangeFieldProp
 
   return (
     <div className="field">
-      <div className="tit-wrap">
-        <label className="label" htmlFor={id}>
-          {label}
-        </label>
-        <output className="value" htmlFor={id}>
-          {value}
-          {unit}
-        </output>
-      </div>
+      <label className="label" htmlFor={id}>
+        {label}
+      </label>
       <input
         id={id}
         className="range"
@@ -35,6 +29,10 @@ function RangeField({ label, value, range, unit = '', onChange }: RangeFieldProp
         style={{ '--progress': `${progress}%` } as CSSProperties}
         onChange={(e) => onChange(Number(e.target.value))}
       />
+      <output className="value" htmlFor={id}>
+        {value}
+        {unit}
+      </output>
     </div>
   );
 }

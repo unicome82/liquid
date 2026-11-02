@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   AMOUNT_RANGE,
   COLOR_THEMES,
@@ -20,6 +20,19 @@ interface ControlPanelProps {
 function ControlPanel({ settings, onChange }: ControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const hasOpened = useRef(false);
+
+  // The toggle hides while open, so move focus with it instead of losing it
+  useEffect(() => {
+    if (isOpen) {
+      hasOpened.current = true;
+      closeRef.current?.focus();
+    } else if (hasOpened.current) {
+      toggleRef.current?.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,7 +49,20 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
   return (
     <div className={`control${isOpen ? ' is-open' : ''}`}>
       <div className="panel" id={panelId} inert={!isOpen}>
-        <h2 className="tit">Controls</h2>
+        <div className="tit-wrap">
+          <h2 className="tit">Controls</h2>
+          <button
+            ref={closeRef}
+            type="button"
+            className="close"
+            aria-label="Close controls"
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="material-symbols-outlined icon" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
         <RangeField
           label="Intensity"
           value={settings.intensity}
@@ -74,18 +100,21 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
           options={COLOR_THEMES}
           renderVisual={(theme) => <span className={`swatch is-${theme}`} aria-hidden="true" />}
           onChange={(theme) => update('theme', theme)}
+          isSwatch
         />
       </div>
       <button
+        ref={toggleRef}
         type="button"
         className="btn"
         aria-expanded={isOpen}
         aria-controls={panelId}
-        aria-label={isOpen ? 'Close controls' : 'Open controls'}
-        onClick={() => setIsOpen((open) => !open)}
+        aria-label="Open controls"
+        inert={isOpen}
+        onClick={() => setIsOpen(true)}
       >
         <span className="material-symbols-outlined icon" aria-hidden="true">
-          {isOpen ? 'close' : 'tune'}
+          tune
         </span>
       </button>
     </div>

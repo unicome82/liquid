@@ -21,8 +21,10 @@ export interface Palette {
   bgAccent: Rgb;
   shadowTint: Rgb;
   transition: Rgb;
-  /** 0 = soft liquid, 1 = mirror-like metal */
+  /** 0–1 blend toward chrome */
   metal: number;
+  /** 0–1 blend toward clear water */
+  water: number;
 }
 
 export interface LiquidRenderer {
@@ -104,6 +106,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     shadowTint: gl.getUniformLocation(program, 'uShadowTint'),
     transition: gl.getUniformLocation(program, 'uTransition'),
     metal: gl.getUniformLocation(program, 'uMetal'),
+    water: gl.getUniformLocation(program, 'uWater'),
   };
 
   const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
@@ -166,6 +169,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform3fv(uniforms.shadowTint, palette.shadowTint);
     gl!.uniform3fv(uniforms.transition, palette.transition);
     gl!.uniform1f(uniforms.metal, palette.metal);
+    gl!.uniform1f(uniforms.water, palette.water);
     gl!.drawArrays(gl!.TRIANGLES, 0, FULLSCREEN_TRIANGLE.length / 2);
   }
 

@@ -19,6 +19,12 @@
     }
   }
   --color-cream: #{$color-cream};
+  --color-night: #{$color-night};
+  --color-night-soft: #{$color-night-soft};
+  --ui-ink: #{$color-ink};
+  --ui-paper: #{$color-cream};
+  --ui-line: #{$color-line};
+  --ui-glass: #{$color-panel-bg};
 }
 
 // Material Symbols: outline by default, `.fill` switches to the filled glyph
@@ -52,6 +58,15 @@ body {
 .liquid {
   @include full-screen;
   overflow: hidden;
+  color: $ui-ink;
+
+  // Dark backgrounds (metal themes) flip the UI to light-on-dark
+  &.is-dark {
+    --ui-ink: #{$color-cream};
+    --ui-paper: #{$color-ink};
+    --ui-line: #{$color-line-dark};
+    --ui-glass: #{$color-panel-bg-dark};
+  }
 
   .canvas,
   .fallback {
@@ -95,41 +110,55 @@ body {
     right: $space-md;
     bottom: $space-md;
     z-index: $z-ui;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: $space-sm;
 
     @include mq($bp-tablet) {
       right: $space-lg;
       bottom: $space-lg;
     }
 
-    .btn {
+    .btn,
+    .close {
       @include flex-center;
-      @include glass;
-      width: $size-btn;
-      height: $size-btn;
       border-radius: $radius-full;
+      color: $ui-ink;
       transition: transform $duration-fast $ease-out;
 
       &:hover {
         transform: scale($scale-hover);
       }
+    }
+
+    .btn {
+      @include glass;
+      width: $size-btn;
+      height: $size-btn;
 
       .icon {
         font-size: $font-size-icon-lg;
       }
     }
 
+    .close {
+      width: $size-btn-sm;
+      height: $size-btn-sm;
+
+      .icon {
+        font-size: $font-size-icon;
+      }
+    }
+
     .panel {
       @include glass;
+      position: absolute;
+      right: 0;
+      bottom: 0;
       display: flex;
       flex-direction: column;
-      gap: $space-md;
+      gap: $space-sm;
       width: min($width-panel, calc(100vw - #{$space-md * 2}));
-      padding: $space-md;
+      padding: $space-sm $space-md $space-md;
       border-radius: $radius-lg;
+      color: $ui-ink;
       opacity: 0;
       visibility: hidden;
       transform: translateY($space-xs);
@@ -139,10 +168,17 @@ body {
         visibility $duration-base;
     }
 
-    &.is-open .panel {
-      opacity: 1;
-      visibility: visible;
-      transform: none;
+    // The panel's own close button replaces the toggle while open
+    &.is-open {
+      .panel {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+      }
+
+      .btn {
+        visibility: hidden;
+      }
     }
 
     .tit {
@@ -161,10 +197,21 @@ body {
       text-transform: uppercase;
     }
 
+    // Label | control | value on a single line
+    .field,
+    .options {
+      display: grid;
+      grid-template-columns: $width-field-label 1fr;
+      align-items: center;
+      gap: $space-sm;
+    }
+
     .field {
-      display: flex;
-      flex-direction: column;
-      gap: $space-xs;
+      grid-template-columns: $width-field-label 1fr $width-field-value;
+
+      .value {
+        text-align: right;
+      }
     }
 
     .range {
@@ -177,21 +224,13 @@ body {
       &::-webkit-slider-runnable-track {
         height: $size-track;
         border-radius: $radius-full;
-        background: linear-gradient(
-          to right,
-          $color-ink var(--progress),
-          $color-line var(--progress)
-        );
+        background: linear-gradient(to right, $ui-ink var(--progress), $ui-line var(--progress));
       }
 
       &::-moz-range-track {
         height: $size-track;
         border-radius: $radius-full;
-        background: linear-gradient(
-          to right,
-          $color-ink var(--progress),
-          $color-line var(--progress)
-        );
+        background: linear-gradient(to right, $ui-ink var(--progress), $ui-line var(--progress));
       }
 
       &::-webkit-slider-thumb {
@@ -200,7 +239,7 @@ body {
         margin-top: calc((#{$size-track} - #{$size-thumb}) / 2);
         border: 0;
         border-radius: $radius-full;
-        background: $color-ink;
+        background: $ui-ink;
         appearance: none;
       }
 
@@ -209,54 +248,50 @@ body {
         height: $size-thumb;
         border: 0;
         border-radius: $radius-full;
-        background: $color-ink;
+        background: $ui-ink;
       }
     }
 
     .options {
-      border: 0;
-
-      .label {
-        margin-bottom: $space-xs;
-      }
-
       .list {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: $space-xs;
+        display: flex;
+        gap: $space-2xs;
       }
 
       .item {
         position: relative;
         display: flex;
+        flex: 1;
+        flex-direction: column;
         align-items: center;
-        gap: $space-xs;
-        padding: $space-xs;
-        border: $border-width solid $color-line;
+        gap: $space-2xs;
+        padding: $space-xs $space-2xs;
+        border: $border-width solid $ui-line;
         border-radius: $radius-sm;
-        font-size: $font-size-sm;
+        font-size: $font-size-2xs;
         cursor: pointer;
         transition:
           background $duration-fast $ease-out,
           color $duration-fast $ease-out;
 
         &:hover {
-          border-color: $color-ink;
+          border-color: $ui-ink;
         }
 
         &.is-active {
-          border-color: $color-ink;
-          background: $color-ink;
-          color: $color-cream;
+          border-color: $ui-ink;
+          background: $ui-ink;
+          color: $ui-paper;
         }
 
         &:has(.radio:focus-visible) {
-          outline: $outline-width solid $color-ink;
+          outline: $outline-width solid $ui-ink;
           outline-offset: $outline-width;
         }
       }
 
-      .radio {
+      .radio,
+      .is-hidden {
         @include visually-hidden;
       }
 
@@ -264,11 +299,30 @@ body {
         font-size: $font-size-icon;
       }
 
+      // Colour choices are swatch-only round buttons
+      &.is-swatch {
+        .list {
+          gap: $space-xs;
+        }
+
+        .item {
+          flex: none;
+          padding: $space-2xs;
+          border-color: transparent;
+          border-radius: $radius-full;
+
+          &.is-active {
+            border-color: $ui-ink;
+            background: transparent;
+          }
+        }
+      }
+
       .swatch {
-        flex-shrink: 0;
+        display: block;
         width: $size-swatch;
         height: $size-swatch;
-        border: $border-width solid $color-line;
+        border: $border-width solid $ui-line;
         border-radius: $radius-full;
 
         @each $name, $colors in $liquid-themes {

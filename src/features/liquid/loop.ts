@@ -3,12 +3,13 @@ import { LiquidSimulation } from './physics';
 import { PointerTracker } from './pointer';
 import { AdaptiveQuality } from './quality';
 import { createLiquidRenderer } from './renderer';
-import { buildScene, type Scene } from './scene';
+import { buildScene, fitScale, type Scene } from './scene';
 
 const MS_PER_SECOND = 1000;
 // Clamp so a stalled frame can't fling the springs off-screen
 const MAX_STEP_SECONDS = 1 / 30;
 const PERCENT = 100;
+const SCALE_KEY_DIGITS = 2;
 
 /** Starts rendering; returns a stop function. Throws if WebGL or the scene can't be set up. */
 export function startLiquidLoop(
@@ -33,10 +34,11 @@ export function startLiquidLoop(
 
   // Size only rescales target radii; the simulation eases blobs to the new size
   const syncLayout = (aspect: number, amount: number, size: number, theme: ColorTheme) => {
-    const key = `${aspect < 1}-${amount}-${size}-${theme}`;
+    const scale = (size / PERCENT) * fitScale(aspect);
+    // Rounded so continuous window resizes don't reset the layout every frame
+    const key = `${aspect < 1}-${amount}-${scale.toFixed(SCALE_KEY_DIGITS)}-${theme}`;
     if (key === layoutKey) return;
     layoutKey = key;
-    const scale = size / PERCENT;
     simulation.setLayout(
       scene.getBlobs(aspect, amount, theme).map((blob) => ({ ...blob, radius: blob.radius * scale })),
     );
