@@ -52,13 +52,14 @@ export function startLiquidLoop(
 
     if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
 
-    const { amount, intensity, mode, size, theme } = getSettings();
+    const { amount, intensity, mode, size, theme, font } = getSettings();
     const dt = Math.min(frameMs / MS_PER_SECOND, MAX_STEP_SECONDS);
     const aspect = canvas.clientWidth / canvas.clientHeight;
     const normalizedIntensity =
       (intensity - INTENSITY_RANGE.min) / (INTENSITY_RANGE.max - INTENSITY_RANGE.min);
 
     renderer.resize(quality.scale);
+    renderer.setBackdropFont(font);
     syncLayout(aspect, amount, size, theme);
     simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
     renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.getPalette(theme));

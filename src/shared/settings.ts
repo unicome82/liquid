@@ -1,4 +1,5 @@
 export type InteractionMode = 'attract' | 'repel' | 'cut' | 'stretch';
+export type BackdropFont = 'dm-sans' | 'instrument-serif' | 'fraunces' | 'bricolage' | 'unbounded';
 export type ColorTheme = 'pastel' | 'vivid' | 'water' | 'silver' | 'gold';
 
 export interface LiquidSettings {
@@ -10,6 +11,8 @@ export interface LiquidSettings {
   size: number;
   mode: InteractionMode;
   theme: ColorTheme;
+  /** Temporary: typeface trial for the backdrop copy */
+  font: BackdropFont;
 }
 
 export interface Range {
@@ -28,6 +31,7 @@ export const DEFAULT_SETTINGS: LiquidSettings = {
   size: 100,
   mode: 'attract',
   theme: 'pastel',
+  font: 'dm-sans',
 };
 
 export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: string }[] = [
@@ -47,3 +51,12 @@ export const COLOR_THEMES: { value: ColorTheme; label: string }[] = [
 
 /** Chrome themes, which sit on a dark background */
 export const isMetalTheme = (theme: ColorTheme) => theme === 'silver' || theme === 'gold';
+
+// Temporary typeface trial for the backdrop copy; families are loaded in index.html
+export const BACKDROP_FONTS: { value: BackdropFont; label: string; family: string; weight: number }[] = [
+  { value: 'dm-sans', label: 'DM Sans', family: "'DM Sans', sans-serif", weight: 500 },
+  { value: 'instrument-serif', label: 'Instrument Serif', family: "'Instrument Serif', serif", weight: 400 },
+  { value: 'fraunces', label: 'Fraunces', family: "'Fraunces', serif", weight: 400 },
+  { value: 'bricolage', label: 'Bricolage Grotesque', family: "'Bricolage Grotesque', sans-serif", weight: 500 },
+  { value: 'unbounded', label: 'Unbounded', family: "'Unbounded', sans-serif", weight: 500 },
+];

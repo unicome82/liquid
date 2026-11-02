@@ -106,6 +106,65 @@ body {
     }
   }
 
+  // Temporary typeface trial
+  .font-select {
+    @include glass;
+    position: absolute;
+    top: $space-md;
+    right: $space-md;
+    z-index: $z-ui;
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-full;
+    color: $ui-ink;
+
+    @include mq($bp-tablet) {
+      top: $space-lg;
+      right: $space-lg;
+    }
+
+    // Hidden on phones so the pill clears the logo; the select keeps its aria-label
+    .label {
+      display: none;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      letter-spacing: $letter-spacing-label;
+      text-transform: uppercase;
+
+      @include mq($bp-tablet) {
+        display: block;
+      }
+    }
+
+    .select {
+      padding-right: $space-md;
+      margin-right: -$space-md;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: $font-size-xs;
+      appearance: none;
+
+      @include mq($bp-tablet) {
+        font-size: $font-size-sm;
+      }
+      cursor: pointer;
+
+      option {
+        color: $color-ink;
+      }
+    }
+
+    // Custom arrow; clicks pass through to the select underneath
+    .icon {
+      font-size: $font-size-icon;
+      pointer-events: none;
+    }
+  }
+
   .control {
     position: absolute;
     right: $space-md;

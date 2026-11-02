@@ -64,3 +64,4 @@
 - Fix: panel blur never applied — mixin wrote `backdrop-filter` + `-webkit-backdrop-filter`, the minifier kept only the prefixed one (Chrome ignores it). Now unprefixed only; build emits both. Computed `backdrop-filter: blur(24px)` ✅
 - Chrome highlights whiten (env 0.85→1.2 blends tint → white) so gold's bright areas read white. Screenshots Gold/Silver desktop + mobile ✅ `npm run build` ✅
 - Panel blur 24px → 8px. `npm run build` ✅
+- **Temporary font select** (top-right, `FontSelect.tsx`): DM Sans / Instrument Serif / Fraunces / Bricolage Grotesque / Unbounded for the backdrop copy; renderer redraws on change and again once the face loads. Copy now shrinks to fit 70% of the height (wide faces overran the logo). Mobile: label hidden + smaller text so the pill clears the logo. Screenshots all fonts desktop, Unbounded mobile ✅ `npm run build` ✅

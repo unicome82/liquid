@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS, type BackdropFont } from '../../shared/settings';
 import { backdropFontReady, drawBackdropText } from './backdropText';
 import { CUT_POINTS, type CutPoint } from './cut';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
@@ -34,6 +35,8 @@ export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
   render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
+  /** Redraws the backdrop copy in this typeface (no-op when unchanged) */
+  setBackdropFont: (font: BackdropFont) => void;
   dispose: () => void;
 }
 
@@ -123,6 +126,9 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const textCanvas = document.createElement('canvas');
   const textTexture = gl.createTexture();
   let textSizeKey = '';
+  let textFont = DEFAULT_SETTINGS.font;
+  // Null until the first request, so the initial font still waits for its face to load
+  let requestedFont: BackdropFont | null = null;
   gl.bindTexture(gl.TEXTURE_2D, textTexture);
   // Non-power-of-two textures in WebGL 1 need clamping and no mipmaps
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -135,17 +141,24 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     const key = `${canvas.clientWidth}x${canvas.clientHeight}`;
     if (!force && key === textSizeKey) return;
     textSizeKey = key;
-    drawBackdropText(textCanvas, canvas.clientWidth, canvas.clientHeight);
+    drawBackdropText(textCanvas, canvas.clientWidth, canvas.clientHeight, textFont);
     gl!.bindTexture(gl!.TEXTURE_2D, textTexture);
     // Canvas rows run top-down, GL texture rows bottom-up
     gl!.pixelStorei(gl!.UNPACK_FLIP_Y_WEBGL, true);
     gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA, gl!.RGBA, gl!.UNSIGNED_BYTE, textCanvas);
   }
 
-  backdropFontReady()
-    .then(() => updateText(true))
-    // Fallback face is already drawn; nothing else to do
-    .catch(() => {});
+  function setBackdropFont(font: BackdropFont) {
+    if (font === requestedFont) return;
+    requestedFont = font;
+    textFont = font;
+    updateText(true);
+    backdropFontReady(font)
+      // Redraw once the face arrives, unless another font was picked meanwhile
+      .then(() => font === requestedFont && updateText(true))
+      // Fallback face is already drawn; nothing else to do
+      .catch(() => {});
+  }
 
   const maxDpr = window.matchMedia('(pointer: coarse)').matches ? MAX_DPR_TOUCH : MAX_DPR_DESKTOP;
 
@@ -216,5 +229,5 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.deleteProgram(program);
   }
 
-  return { resize, render, dispose };
+  return { resize, render, setBackdropFont, dispose };
 }
