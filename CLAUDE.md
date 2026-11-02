@@ -71,5 +71,5 @@
 - Stack: React + TypeScript + SCSS (Vite), raw WebGL (no 3D library)
 - Run: `npm run dev`
 - Build / lint / test: `npm run build` (tsc type check + vite build)
-- Key folders: `src/` (App, components), `src/styles/` (`_reset`, `_variables`, `_mixins`, `style.scss`)
+- Key folders: `src/features/liquid/` (WebGL canvas, shaders, scene layout), `src/styles/` (`_reset`, `_variables`, `_mixins`, `style.scss`)
 - Notes: Single full-screen page, no scroll. All page styles live in `style.scss` (no `_layout`/`_common`/`_main`).

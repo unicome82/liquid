@@ -2,6 +2,16 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+:root {
+  // Exposed so the WebGL renderer reads the same tokens as the CSS
+  --color-sky: #{$color-sky};
+  --color-butter: #{$color-butter};
+  --color-peach: #{$color-peach};
+  --color-pink: #{$color-pink};
+  --color-lavender: #{$color-lavender};
+  --color-cream: #{$color-cream};
+}
+
 html,
 body {
   overflow: hidden;
@@ -18,6 +28,19 @@ body {
 .liquid {
   @include full-screen;
   overflow: hidden;
+
+  .canvas,
+  .fallback {
+    position: absolute;
+    inset: 0;
+    z-index: $z-canvas;
+    width: 100%;
+    height: 100%;
+  }
+
+  .fallback {
+    background: linear-gradient(135deg, $color-sky, $color-butter 45%, $color-peach 70%, $color-pink);
+  }
 
   .logo {
     position: absolute;
