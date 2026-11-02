@@ -35,3 +35,4 @@
 - **Ink** cursor blob in all modes except cut (springs after pointer, takes nearby liquid colour). BLOB_COUNT = 12 + 4 drips + 1 ink.
 - Verified (headless): ink merges into ball, cut groove visible, melt sags blob downward. `npm run build` ✅
 - Removed ink cursor (BLOB_COUNT back to 12 + 4). Mouse now reacts only while pressed (hover ignored), same as touch. Verified hover = no change, press+drag = attract ✅
+- Mode melt → **mix**: stirred blobs blend colours toward their shared average (recover 0.08/s) + shader colour-only swirl warp (marbling) that follows stroke turning direction; liquid also spins tangentially. Melt drips removed (BLOB_COUNT = 12). `npm run build` ✅

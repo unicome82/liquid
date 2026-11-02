@@ -1,4 +1,5 @@
 import { CUT_POINTS, type CutPoint } from './cut';
+import type { Swirl } from './physics';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
 export type Rgb = [number, number, number];
@@ -24,7 +25,7 @@ export interface Palette {
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], swirl: Swirl, palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -90,6 +91,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     blobs: gl.getUniformLocation(program, 'uBlobs'),
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
+    swirl: gl.getUniformLocation(program, 'uSwirl'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -142,13 +144,14 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     });
   }
 
-  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette) {
+  function render(blobs: Blob[], cuts: CutPoint[], swirl: Swirl, palette: Palette) {
     packBlobs(blobs);
     packCuts(cuts);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
     gl!.uniform3fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
+    gl!.uniform4f(uniforms.swirl, ...toScene(swirl.x, swirl.y), swirl.angle, swirl.radius);
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);

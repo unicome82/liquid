@@ -54,7 +54,12 @@ export function startLiquidLoop(
     renderer.resize(quality.scale);
     syncLayout(aspect, amount);
     simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
-    renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.palette);
+    renderer.render(
+      simulation.getBlobs(),
+      simulation.getCuts(),
+      simulation.getSwirl(),
+      scene.palette,
+    );
   };
 
   const start = () => {

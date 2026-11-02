@@ -12,11 +12,19 @@ interface Body {
   radius: number;
   targetRadius: number;
   color: Rgb;
+  /** The blob's own colour, which it drifts back to after being mixed */
+  baseColor: Rgb;
   phase: number;
 }
 
-interface Droplet extends Body {
-  age: number;
+export interface Swirl {
+  /** 0–1 across the viewport */
+  x: number;
+  y: number;
+  /** Twist at the centre, radians; positive turns the colours clockwise on screen */
+  angle: number;
+  /** Short-side units */
+  radius: number;
 }
 
 export interface PointerInput {
@@ -63,28 +71,25 @@ const FORCE: Span = { min: 1, max: 4 };
 const TAP_IMPULSE = 0.6;
 /** 1/s — how strongly blobs are dragged along with the pointer's motion */
 const STIR = 2;
-// Inside this distance attract eases off so the direction can't flip-flop at the center
+// Inside this distance attract/mix ease off so the direction can't flip-flop at the center
 const CORE_RADIUS = 0.08;
 
 /** Pointer-repel share applied along a cut so the liquid visibly parts */
 const CUT_PUSH = 0.3;
 
-export const MAX_DROPLETS = 4;
-/** Shader slots needed on top of the layout blobs */
-export const EXTRA_BLOBS = MAX_DROPLETS;
-
-/** Seconds between drips while the pointer hovers a blob in melt mode */
-const MELT_INTERVAL = 0.35;
-// Drips start just inside the bottom edge so they peel off with a neck
-const MELT_SPAWN_DEPTH = 0.85;
-const MELT_SPAWN_JITTER = 0.5;
-/** Drip size relative to its source blob */
-const MELT_DROP_SCALE: Span = { min: 0.25, max: 0.4 };
-/** Short-side units/s² */
-const MELT_GRAVITY = 0.8;
-/** 1/s — viscous drag so drips ooze rather than free-fall */
-const MELT_DRAG = 1.5;
-const MELT_LIFETIME = 2.5;
+/** 1/s — how fast colours under the pointer blend toward their shared average */
+const MIX_RATE = 1.5;
+/** 1/s — mixed colours drift back slowly so the marbling lingers */
+const COLOR_RECOVER_RATE = 0.08;
+/** Reach of the colour twist, short-side units */
+const SWIRL_RADIUS = 0.35;
+/** Radians of twist per short-side unit the pointer travels */
+const SWIRL_GAIN: Span = { min: 2, max: 6 };
+const SWIRL_MAX_ANGLE = 12;
+/** 1/s */
+const SWIRL_DECAY = 0.5;
+// Below this the stroke is effectively straight, so keep the previous twist direction
+const TURN_EPSILON = 1e-4;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
@@ -96,10 +101,11 @@ function wave(t: number, phase: number): number {
 
 export class LiquidSimulation {
   private bodies: Body[] = [];
-  private droplets: Droplet[] = [];
-  private meltCooldown = 0;
-  private dropCount = 0;
   private cutTrail = new CutTrail();
+  private swirl: Swirl = { x: 0.5, y: 0.5, angle: 0, radius: SWIRL_RADIUS };
+  private turnSign = 1;
+  private lastVx = 0;
+  private lastVy = 0;
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
 
@@ -111,7 +117,7 @@ export class LiquidSimulation {
         body.homeX = blob.x;
         body.homeY = blob.y;
         body.targetRadius = blob.radius;
-        body.color = blob.color;
+        body.baseColor = blob.color;
         return;
       }
       this.bodies.push({
@@ -124,6 +130,7 @@ export class LiquidSimulation {
         radius: 0,
         targetRadius: blob.radius,
         color: blob.color,
+        baseColor: blob.color,
         phase: i * GOLDEN_ANGLE,
       });
     });
@@ -165,79 +172,69 @@ export class LiquidSimulation {
 
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
 
-    if (mode === 'melt') this.shedDrips(dt, pointer, intensity, scaleX, scaleY);
-    this.stepDrips(dt, radiusBlend, scaleY);
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
+    const isMixing = mode === 'mix' && pointer.active;
+    this.mixColors(dt, pointer, isMixing, scaleX, scaleY);
+    this.updateSwirl(dt, pointer, isMixing, intensity, scaleX, scaleY);
   }
 
-  // Peels a drip off the bottom of the blob under the pointer
-  private shedDrips(
+  // Blends the colours of blobs being stirred; every blob slowly un-mixes back to its own hue
+  private mixColors(
     dt: number,
     pointer: PointerInput,
+    isMixing: boolean,
+    scaleX: number,
+    scaleY: number,
+  ) {
+    const weights = this.bodies.map((body) =>
+      isMixing ? pointerFalloff(body, pointer, scaleX, scaleY) : 0,
+    );
+    const total = weights.reduce((sum, w) => sum + w, 0);
+    const average: Rgb = [0, 0, 0];
+    if (total > 0) {
+      this.bodies.forEach((body, i) => {
+        body.color.forEach((c, ch) => (average[ch] += (c * weights[i]) / total));
+      });
+    }
+
+    const recover = 1 - Math.exp(-COLOR_RECOVER_RATE * dt);
+    this.bodies.forEach((body, i) => {
+      const mix = total > 0 ? 1 - Math.exp(-MIX_RATE * weights[i] * dt) : 0;
+      body.color = body.color.map((c, ch) => {
+        const mixed = c + (average[ch] - c) * mix;
+        return mixed + (body.baseColor[ch] - mixed) * recover;
+      }) as Rgb;
+    });
+  }
+
+  // The stroke's turning direction decides which way the colours twist
+  private updateSwirl(
+    dt: number,
+    pointer: PointerInput,
+    isMixing: boolean,
     intensity: number,
     scaleX: number,
     scaleY: number,
   ) {
-    this.meltCooldown -= dt;
-    if (pointer.tapped) this.meltCooldown = 0;
-    if (!pointer.active || this.meltCooldown > 0 || this.droplets.length >= MAX_DROPLETS) return;
+    this.swirl.angle *= Math.exp(-SWIRL_DECAY * dt);
+    if (!isMixing) return;
 
-    const source = this.nearestBody(pointer.x, pointer.y, scaleX, scaleY);
-    if (!source) return;
-    const edge =
-      Math.hypot((source.x - pointer.x) * scaleX, (source.y - pointer.y) * scaleY) - source.radius;
-    if (edge > INFLUENCE_RADIUS) return;
+    const vx = pointer.vx * scaleX;
+    const vy = pointer.vy * scaleY;
+    const turn = this.lastVx * vy - this.lastVy * vx;
+    if (Math.abs(turn) > TURN_EPSILON) this.turnSign = Math.sign(turn);
+    this.lastVx = vx;
+    this.lastVy = vy;
 
-    const jitter = Math.sin(this.dropCount * GOLDEN_ANGLE) * source.radius * MELT_SPAWN_JITTER;
-    this.droplets.push({
-      homeX: 0,
-      homeY: 0,
-      x: source.x + jitter / scaleX,
-      y: source.y + (source.radius * MELT_SPAWN_DEPTH) / scaleY,
-      vx: source.vx,
-      vy: source.vy,
-      radius: 0,
-      targetRadius: source.radius * lerp(MELT_DROP_SCALE, intensity),
-      color: source.color,
-      phase: 0,
-      age: 0,
-    });
-    this.dropCount++;
-    this.meltCooldown = MELT_INTERVAL;
-  }
-
-  // Drips fall under gravity and taper away; anything below the screen is dropped
-  private stepDrips(dt: number, radiusBlend: number, scaleY: number) {
-    for (const drop of this.droplets) {
-      drop.age += dt;
-      drop.vy += (MELT_GRAVITY / scaleY - drop.vy * MELT_DRAG) * dt;
-      drop.vx -= drop.vx * MELT_DRAG * dt;
-      drop.x += drop.vx * dt;
-      drop.y += drop.vy * dt;
-      if (drop.age > MELT_LIFETIME) drop.targetRadius = 0;
-      drop.radius += (drop.targetRadius - drop.radius) * radiusBlend;
-    }
-    this.droplets = this.droplets.filter(
-      (d) => (d.targetRadius > 0 || d.radius > RADIUS_EPSILON) && d.y - d.radius / scaleY < 1,
-    );
-  }
-
-  private nearestBody(x: number, y: number, scaleX: number, scaleY: number): Body | undefined {
-    let nearest: Body | undefined;
-    let best = Infinity;
-    for (const body of this.bodies) {
-      if (body.targetRadius <= 0) continue;
-      const distance = Math.hypot((body.x - x) * scaleX, (body.y - y) * scaleY) - body.radius;
-      if (distance < best) {
-        best = distance;
-        nearest = body;
-      }
-    }
-    return nearest;
+    this.swirl.x = pointer.x;
+    this.swirl.y = pointer.y;
+    const angle =
+      this.swirl.angle + this.turnSign * Math.hypot(vx, vy) * lerp(SWIRL_GAIN, intensity) * dt;
+    this.swirl.angle = Math.max(-SWIRL_MAX_ANGLE, Math.min(SWIRL_MAX_ANGLE, angle));
   }
 
   getBlobs(): Blob[] {
-    const bodies = this.bodies.map((body) => ({
+    return this.bodies.map((body) => ({
       x: body.x,
       y: body.y,
       radius:
@@ -245,12 +242,14 @@ export class LiquidSimulation {
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
     }));
-    const droplets = this.droplets.map(({ x, y, radius, color }) => ({ x, y, radius, color }));
-    return [...bodies, ...droplets];
   }
 
   getCuts(): CutPoint[] {
     return this.cutTrail.getPoints();
+  }
+
+  getSwirl(): Swirl {
+    return { ...this.swirl };
   }
 }
 
@@ -262,10 +261,16 @@ function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, 
       return [nx, ny];
     case 'cut':
       return [nx * CUT_PUSH, ny * CUT_PUSH];
-    case 'melt':
-      // Short-side space has y pointing down the screen, so this is gravity
-      return [0, 1];
+    case 'mix':
+      return [-ny, nx];
   }
+}
+
+/** 0–1 weight of the pointer's influence on a blob, measured from the blob's edge */
+function pointerFalloff(body: Body, pointer: PointerInput, scaleX: number, scaleY: number): number {
+  const distance = Math.hypot((body.x - pointer.x) * scaleX, (body.y - pointer.y) * scaleY);
+  const edge = Math.max(distance - body.radius, 0);
+  return edge >= INFLUENCE_RADIUS ? 0 : (1 - edge / INFLUENCE_RADIUS) ** 2;
 }
 
 function applyPointer(
@@ -284,7 +289,7 @@ function applyPointer(
   if (edge >= INFLUENCE_RADIUS || distance === 0) return;
 
   const falloff = (1 - edge / INFLUENCE_RADIUS) ** 2;
-  const core = mode === 'attract' ? Math.min(distance / CORE_RADIUS, 1) : 1;
+  const core = mode === 'attract' || mode === 'mix' ? Math.min(distance / CORE_RADIUS, 1) : 1;
   const [dirX, dirY] = modeDirection(mode, dx / distance, dy / distance);
 
   let dvx = dirX * force * falloff * core * dt;

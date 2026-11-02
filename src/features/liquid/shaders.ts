@@ -1,9 +1,8 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
-import { EXTRA_BLOBS } from './physics';
 
-// Shader arrays are fixed-size, so allocate for the largest amount plus melt drips
-export const BLOB_COUNT = AMOUNT_RANGE.max + EXTRA_BLOBS;
+// Shader arrays are fixed-size, so allocate for the largest amount the UI allows
+export const BLOB_COUNT = AMOUNT_RANGE.max;
 
 export const VERTEX_SHADER = `
 attribute vec2 aPosition;
@@ -22,6 +21,7 @@ precision highp float;
 uniform vec2 uResolution;
 uniform vec3 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius
 uniform vec3 uColors[BLOB_COUNT];
+uniform vec4 uSwirl;               // xy: centre (scene units), z: twist (rad), w: radius
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
@@ -114,6 +114,17 @@ vec3 liquidColor(vec2 p) {
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
 }
 
+// Twists only the colour lookup, so mixing marbles the hues without bending the shape.
+// Scene y points up, so a positive angle reads as clockwise on screen.
+vec2 swirlWarp(vec2 p) {
+  vec2 d = p - uSwirl.xy;
+  float t = 1.0 - smoothstep(0.0, uSwirl.w, length(d));
+  float a = uSwirl.z * t * t;
+  float c = cos(a);
+  float s = sin(a);
+  return uSwirl.xy + mat2(c, s, -s, c) * d;
+}
+
 vec3 background(vec2 uv, vec2 p, float d) {
   vec3 bg = mix(uBgBottom, uBgTop, uv.y);
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
@@ -141,7 +152,7 @@ vec3 shadeLiquid(vec2 p, float d, float px) {
   float nh = max(dot(n, halfVec), 0.0);
   float fresnel = pow(1.0 - n.z, 3.0);
 
-  vec3 base = liquidColor(p);
+  vec3 base = liquidColor(swirlWarp(p));
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
