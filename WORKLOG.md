@@ -10,3 +10,9 @@
 - Tuned: grey hue blends → lift toward butter; thin necks → MERGE_K 0.28; separate portrait layout.
 - `npm run build` ✅ / screenshots desktop + mobile ✅
 - Color tweak: sky → pastel #7ec8f8, butter → brighter #fff3a1; shadow 0.35→0.2, pink accent 0.35→0.2 (yellow read as beige). Screenshots ✅
+
+## 2026-11-02 · Control panel
+- Panel (Intensity / Amount / Mode) bottom-right, toggle + Esc close; settings in `src/shared/settings.ts`.
+- Amount live (4–12, BLOB_COUNT = AMOUNT_RANGE.max). Intensity / Mode stored only — wired in steps 3–4.
+- Known: at 12 blobs (desktop) MERGE_K 0.28 fuses most blobs into one mass; revisit with motion.
+- `npm run build` ✅ / screenshots open + closed, desktop + mobile ✅

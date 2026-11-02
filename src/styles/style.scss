@@ -12,6 +12,21 @@
   --color-cream: #{$color-cream};
 }
 
+// Material Symbols: outline by default, `.fill` switches to the filled glyph
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0;
+
+  &.fill {
+    font-variation-settings: 'FILL' 1;
+  }
+}
+
+.tit-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 html,
 body {
   overflow: hidden;
@@ -21,7 +36,7 @@ body {
 body {
   background: $color-bg;
   color: $color-text;
-  font-family: $font-display;
+  font-family: $font-body;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -47,6 +62,7 @@ body {
     top: $space-md;
     left: $space-md;
     z-index: $z-ui;
+    font-family: $font-display;
     font-size: $font-size-logo;
     font-weight: $font-weight-bold;
     letter-spacing: $letter-spacing-logo;
@@ -55,6 +71,182 @@ body {
       top: $space-lg;
       left: $space-lg;
       font-size: $font-size-logo-lg;
+    }
+  }
+
+  .control {
+    position: absolute;
+    right: $space-md;
+    bottom: $space-md;
+    z-index: $z-ui;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $space-sm;
+
+    @include mq($bp-tablet) {
+      right: $space-lg;
+      bottom: $space-lg;
+    }
+
+    .btn {
+      @include flex-center;
+      @include glass;
+      width: $size-btn;
+      height: $size-btn;
+      border-radius: $radius-full;
+      transition: transform $duration-fast $ease-out;
+
+      &:hover {
+        transform: scale($scale-hover);
+      }
+
+      .icon {
+        font-size: $font-size-icon-lg;
+      }
+    }
+
+    .panel {
+      @include glass;
+      display: flex;
+      flex-direction: column;
+      gap: $space-md;
+      width: min($width-panel, calc(100vw - #{$space-md * 2}));
+      padding: $space-md;
+      border-radius: $radius-lg;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY($space-xs);
+      transition:
+        opacity $duration-base $ease-out,
+        transform $duration-base $ease-out,
+        visibility $duration-base;
+    }
+
+    &.is-open .panel {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+    }
+
+    .tit {
+      font-family: $font-display;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      letter-spacing: $letter-spacing-label;
+      text-transform: uppercase;
+    }
+
+    .label,
+    .value {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      letter-spacing: $letter-spacing-label;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: $space-xs;
+    }
+
+    .range {
+      width: 100%;
+      height: $size-thumb;
+      background: transparent;
+      appearance: none;
+      cursor: pointer;
+
+      &::-webkit-slider-runnable-track {
+        height: $size-track;
+        border-radius: $radius-full;
+        background: linear-gradient(
+          to right,
+          $color-ink var(--progress),
+          $color-line var(--progress)
+        );
+      }
+
+      &::-moz-range-track {
+        height: $size-track;
+        border-radius: $radius-full;
+        background: linear-gradient(
+          to right,
+          $color-ink var(--progress),
+          $color-line var(--progress)
+        );
+      }
+
+      &::-webkit-slider-thumb {
+        width: $size-thumb;
+        height: $size-thumb;
+        margin-top: calc((#{$size-track} - #{$size-thumb}) / 2);
+        border: 0;
+        border-radius: $radius-full;
+        background: $color-ink;
+        appearance: none;
+      }
+
+      &::-moz-range-thumb {
+        width: $size-thumb;
+        height: $size-thumb;
+        border: 0;
+        border-radius: $radius-full;
+        background: $color-ink;
+      }
+    }
+
+    .mode {
+      border: 0;
+
+      .label {
+        margin-bottom: $space-xs;
+      }
+
+      .list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: $space-xs;
+      }
+
+      .item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: $space-xs;
+        padding: $space-xs;
+        border: $border-width solid $color-line;
+        border-radius: $radius-sm;
+        font-size: $font-size-sm;
+        cursor: pointer;
+        transition:
+          background $duration-fast $ease-out,
+          color $duration-fast $ease-out;
+
+        &:hover {
+          border-color: $color-ink;
+        }
+
+        &.is-active {
+          border-color: $color-ink;
+          background: $color-ink;
+          color: $color-cream;
+        }
+
+        &:has(.radio:focus-visible) {
+          outline: $outline-width solid $color-ink;
+          outline-offset: $outline-width;
+        }
+      }
+
+      .radio {
+        @include visually-hidden;
+      }
+
+      .icon {
+        font-size: $font-size-icon;
+      }
     }
   }
 }

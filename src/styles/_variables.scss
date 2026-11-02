@@ -9,15 +9,26 @@ $color-ink: #2b2b3a;
 
 $color-bg: $color-cream;
 $color-text: $color-ink;
+$color-panel-bg: rgba($color-cream, 0.72);
+$color-line: rgba($color-ink, 0.15);
 
 // Fonts
 $font-display: 'Syne', sans-serif;
+$font-body: 'DM Sans', sans-serif;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
 $font-weight-bold: 800;
 $font-size-logo: 1.5rem;
 $font-size-logo-lg: 2rem;
 $letter-spacing-logo: 0.12em;
+$letter-spacing-label: 0.08em;
+$font-size-xs: 0.75rem;
+$font-size-sm: 0.875rem;
+$font-size-icon: 1.25rem;
+$font-size-icon-lg: 1.5rem;
 
 // Spacing
+$space-2xs: 0.25rem;
 $space-xs: 0.5rem;
 $space-sm: 1rem;
 $space-md: 1.5rem;
@@ -26,7 +37,24 @@ $space-lg: 2.5rem;
 // Radii
 $radius-sm: 0.5rem;
 $radius-md: 1rem;
+$radius-lg: 1.25rem;
 $radius-full: 999px;
+
+// Sizes
+$border-width: 1px;
+$outline-width: 2px;
+$scale-hover: 1.06;
+$size-btn: 3rem;
+$size-thumb: 1rem;
+$size-track: 0.25rem;
+$width-panel: 17.5rem;
+
+// Effects
+$blur-panel: 16px;
+$shadow-panel: 0 0.75rem 2rem rgba($color-ink, 0.12);
+$duration-fast: 0.2s;
+$duration-base: 0.3s;
+$ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
 // Breakpoints
 $bp-tablet: 768px;

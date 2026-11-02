@@ -1,4 +1,7 @@
-export const BLOB_COUNT = 8;
+import { AMOUNT_RANGE } from '../../shared/settings';
+
+// Shader arrays are fixed-size, so allocate for the largest amount the UI allows
+export const BLOB_COUNT = AMOUNT_RANGE.max;
 
 export const VERTEX_SHADER = `
 attribute vec2 aPosition;
