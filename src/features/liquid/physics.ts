@@ -1,6 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
+import { StretchGesture } from './stretch';
 
 interface Body {
   homeX: number;
@@ -15,15 +16,6 @@ interface Body {
   phase: number;
 }
 
-export interface Swirl {
-  /** 0–1 across the viewport */
-  x: number;
-  y: number;
-  /** Twist at the centre, radians; positive turns the liquid clockwise on screen */
-  angle: number;
-  /** Short-side units */
-  radius: number;
-}
 
 export interface PointerInput {
   /** 0–1 across the viewport */
@@ -69,22 +61,12 @@ const FORCE: Span = { min: 1, max: 4 };
 const TAP_IMPULSE = 0.6;
 /** 1/s — how strongly blobs are dragged along with the pointer's motion */
 const STIR = 2;
-// Inside this distance attract/twist ease off so the direction can't flip-flop at the center
+// Inside this distance attract eases off so the direction can't flip-flop at the center
 const CORE_RADIUS = 0.08;
 
 /** Pointer-repel share applied along a cut so the liquid visibly parts */
 const CUT_PUSH = 0.3;
 
-/** Reach of the twist, short-side units */
-const SWIRL_RADIUS = 0.35;
-/** Radians of twist per short-side unit the pointer travels */
-const SWIRL_GAIN: Span = { min: 2, max: 6 };
-// Beyond ~1.3 turns the spiral arms get thinner than a pixel and alias
-const SWIRL_MAX_ANGLE = 8;
-/** 1/s — slow, so the twist visibly unwinds after release */
-const SWIRL_DECAY = 0.5;
-// Below this the stroke is effectively straight, so keep the previous twist direction
-const TURN_EPSILON = 1e-4;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
@@ -97,10 +79,7 @@ function wave(t: number, phase: number): number {
 export class LiquidSimulation {
   private bodies: Body[] = [];
   private cutTrail = new CutTrail();
-  private swirl: Swirl = { x: 0.5, y: 0.5, angle: 0, radius: SWIRL_RADIUS };
-  private turnSign = 1;
-  private lastVx = 0;
-  private lastVy = 0;
+  private stretch = new StretchGesture();
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
 
@@ -156,7 +135,8 @@ export class LiquidSimulation {
       const targetX = body.homeX + ampX * wave(t, body.phase);
       const targetY = body.homeY + ampY * wave(t * DRIFT_Y_FREQ, body.phase + GOLDEN_ANGLE);
 
-      if (pointer.active) applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
+      // Stretch moves only the grabbed blob, so skip the stir that would drag its neighbours
+      if (pointer.active && mode !== 'stretch') applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
       body.vx += ((targetX - body.x) * stiffness - body.vx * damping) * dt;
       body.vy += ((targetY - body.y) * stiffness - body.vy * damping) * dt;
       body.x += body.vx * dt;
@@ -167,37 +147,12 @@ export class LiquidSimulation {
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
 
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
-    this.updateSwirl(dt, pointer, mode === 'twist' && pointer.active, intensity, scaleX, scaleY);
+    this.stretch.update(dt, pointer, mode === 'stretch', intensity, this.bodies, scaleX, scaleY);
   }
 
-  // The stroke's turning direction decides which way the liquid twists
-  private updateSwirl(
-    dt: number,
-    pointer: PointerInput,
-    isTwisting: boolean,
-    intensity: number,
-    scaleX: number,
-    scaleY: number,
-  ) {
-    this.swirl.angle *= Math.exp(-SWIRL_DECAY * dt);
-    if (!isTwisting) return;
-
-    const vx = pointer.vx * scaleX;
-    const vy = pointer.vy * scaleY;
-    const turn = this.lastVx * vy - this.lastVy * vx;
-    if (Math.abs(turn) > TURN_EPSILON) this.turnSign = Math.sign(turn);
-    this.lastVx = vx;
-    this.lastVy = vy;
-
-    this.swirl.x = pointer.x;
-    this.swirl.y = pointer.y;
-    const angle =
-      this.swirl.angle + this.turnSign * Math.hypot(vx, vy) * lerp(SWIRL_GAIN, intensity) * dt;
-    this.swirl.angle = Math.max(-SWIRL_MAX_ANGLE, Math.min(SWIRL_MAX_ANGLE, angle));
-  }
 
   getBlobs(): Blob[] {
-    return this.bodies.map((body) => ({
+    const bodies = this.bodies.map((body) => ({
       x: body.x,
       y: body.y,
       radius:
@@ -205,15 +160,14 @@ export class LiquidSimulation {
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
     }));
+    return [...bodies, ...this.stretch.getBlobs()];
   }
 
   getCuts(): CutPoint[] {
     return this.cutTrail.getPoints();
   }
 
-  getSwirl(): Swirl {
-    return { ...this.swirl };
-  }
+
 }
 
 function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, number] {
@@ -224,8 +178,9 @@ function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, 
       return [nx, ny];
     case 'cut':
       return [nx * CUT_PUSH, ny * CUT_PUSH];
-    case 'twist':
-      return [-ny, nx];
+    case 'stretch':
+      // The stretch gesture tugs its own blob; no field force
+      return [0, 0];
   }
 }
 
@@ -245,7 +200,7 @@ function applyPointer(
   if (edge >= INFLUENCE_RADIUS || distance === 0) return;
 
   const falloff = (1 - edge / INFLUENCE_RADIUS) ** 2;
-  const core = mode === 'attract' || mode === 'twist' ? Math.min(distance / CORE_RADIUS, 1) : 1;
+  const core = mode === 'attract' ? Math.min(distance / CORE_RADIUS, 1) : 1;
   const [dirX, dirY] = modeDirection(mode, dx / distance, dy / distance);
 
   let dvx = dirX * force * falloff * core * dt;

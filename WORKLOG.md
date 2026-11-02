@@ -39,3 +39,5 @@
 - Mode mix → **twist**: colour mixing removed; swirl warp now applied to the SDF (shape + colour spiral), max 8 rad, unwinds at 0.5/s. Direct render at angle 5 shows clear spiral ✅ `npm run build` ✅
 - Random layout per load: fixed x/y removed, `scatter()` best-candidate sampling (16 candidates, 5% edge overflow) keeps sizes/colours from the reference. Two loads differ ✅ desktop + mobile screenshots ✅ `npm run build` ✅
 - Cut smoothing: per-segment min width caused stepped notches → tapered capsules (width lerps along segment, plain min — smin added scallops). CUT_SMOOTH 0.04→0.1, width 0.02–0.06, ease-out heal. Direct render before/after ✅ `npm run build` ✅
+- Mode twist → **stretch** (`stretch.ts`): press near a blob edge pulls a 6-blob strand + tip; snaps past 0.35–0.6 su (intensity), tip oozes home, beads retract; release before snap = rubber-band recoil. Per-blob merge range (uBlobs vec4.w, strand 0.08) keeps the thread thin; blobs < 0.012 hidden (dimple dots). Twist/swirl code removed. BLOB_COUNT = 12 + 9.
+- Verified via direct sim drive: pull → thin neck, snap → beads + flying tip ✅ Faint beading ridges remain on long strands. `npm run build` ✅

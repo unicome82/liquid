@@ -1,5 +1,4 @@
 import { CUT_POINTS, type CutPoint } from './cut';
-import type { Swirl } from './physics';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
 export type Rgb = [number, number, number];
@@ -12,6 +11,8 @@ export interface Blob {
   /** Fraction of the viewport's shorter side */
   radius: number;
   color: Rgb;
+  /** Smooth-union range for this blob; omitted uses the shader's default */
+  merge?: number;
 }
 
 export interface Palette {
@@ -25,7 +26,7 @@ export interface Palette {
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  render: (blobs: Blob[], cuts: CutPoint[], swirl: Swirl, palette: Palette) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -36,6 +37,10 @@ const MAX_DPR_TOUCH = 1.5;
 const OFFSCREEN = 1e4;
 const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
 const STRIDE = 3;
+// Blobs carry x, y, radius and merge range
+const BLOB_STRIDE = 4;
+// Tells the shader to fall back to its default merge range
+const DEFAULT_MERGE = 0;
 
 function compileShader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader {
   const shader = gl.createShader(type);
@@ -91,7 +96,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     blobs: gl.getUniformLocation(program, 'uBlobs'),
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
-    swirl: gl.getUniformLocation(program, 'uSwirl'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -99,7 +103,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     transition: gl.getUniformLocation(program, 'uTransition'),
   };
 
-  const blobData = new Float32Array(BLOB_COUNT * STRIDE);
+  const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
   const colorData = new Float32Array(BLOB_COUNT * STRIDE);
   const cutData = new Float32Array(CUT_POINTS * STRIDE);
 
@@ -125,14 +129,16 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
 
   function packBlobs(blobs: Blob[]) {
     for (let i = 0; i < BLOB_COUNT; i++) {
-      const offset = i * STRIDE;
       const blob = blobs[i];
       if (!blob) {
-        blobData.set([OFFSCREEN, OFFSCREEN, 0], offset);
+        blobData.set([OFFSCREEN, OFFSCREEN, 0, DEFAULT_MERGE], i * BLOB_STRIDE);
         continue;
       }
-      blobData.set([...toScene(blob.x, blob.y), blob.radius], offset);
-      colorData.set(blob.color, offset);
+      blobData.set(
+        [...toScene(blob.x, blob.y), blob.radius, blob.merge ?? DEFAULT_MERGE],
+        i * BLOB_STRIDE,
+      );
+      colorData.set(blob.color, i * STRIDE);
     }
   }
 
@@ -144,14 +150,13 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     });
   }
 
-  function render(blobs: Blob[], cuts: CutPoint[], swirl: Swirl, palette: Palette) {
+  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette) {
     packBlobs(blobs);
     packCuts(cuts);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
-    gl!.uniform3fv(uniforms.blobs, blobData);
+    gl!.uniform4fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
-    gl!.uniform4f(uniforms.swirl, ...toScene(swirl.x, swirl.y), swirl.angle, swirl.radius);
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);

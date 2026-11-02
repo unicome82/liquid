@@ -1,8 +1,9 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
+import { EXTRA_BLOBS } from './stretch';
 
-// Shader arrays are fixed-size, so allocate for the largest amount the UI allows
-export const BLOB_COUNT = AMOUNT_RANGE.max;
+// Shader arrays are fixed-size, so allocate for the largest amount plus the stretch strand
+export const BLOB_COUNT = AMOUNT_RANGE.max + EXTRA_BLOBS;
 
 export const VERTEX_SHADER = `
 attribute vec2 aPosition;
@@ -19,9 +20,8 @@ precision highp float;
 #define CUT_POINTS ${CUT_POINTS}
 
 uniform vec2 uResolution;
-uniform vec3 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius
+uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: merge range (0 = default)
 uniform vec3 uColors[BLOB_COUNT];
-uniform vec4 uSwirl;               // xy: centre (scene units), z: twist (rad), w: radius
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
@@ -60,7 +60,7 @@ float smin(float a, float b, float k) {
 }
 
 // Takes the blob itself: GLSL ES 1.0 forbids indexing arrays with function params
-float blobSdf(vec2 p, vec3 blob) {
+float blobSdf(vec2 p, vec4 blob) {
   return length(p - blob.xy) - blob.z;
 }
 
@@ -87,22 +87,11 @@ float cutSdf(vec2 p) {
   return d;
 }
 
-// Rotates space more strongly toward the centre, bending the liquid into a spiral.
-// Scene y points up, so a positive angle reads as clockwise on screen.
-vec2 swirlWarp(vec2 p) {
-  vec2 d = p - uSwirl.xy;
-  float t = 1.0 - smoothstep(0.0, uSwirl.w, length(d));
-  float a = uSwirl.z * t * t;
-  float c = cos(a);
-  float s = sin(a);
-  return uSwirl.xy + mat2(c, s, -s, c) * d;
-}
-
 float sceneSdf(vec2 p) {
-  vec2 q = swirlWarp(p);
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    d = smin(d, blobSdf(q, uBlobs[i]), MERGE_K);
+    float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
+    d = smin(d, blobSdf(p, uBlobs[i]), k);
   }
   return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
@@ -155,8 +144,7 @@ vec3 shadeLiquid(vec2 p, float d, float px) {
   float nh = max(dot(n, halfVec), 0.0);
   float fresnel = pow(1.0 - n.z, 3.0);
 
-  // Same warp as the shape so colours stay attached to their blobs
-  vec3 base = liquidColor(swirlWarp(p));
+  vec3 base = liquidColor(p);
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
