@@ -1,3 +1,4 @@
+import { backdropFontReady, drawBackdropText } from './backdropText';
 import { CUT_POINTS, type CutPoint } from './cut';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
@@ -25,6 +26,8 @@ export interface Palette {
   metal: number;
   /** 0–1 blend toward clear water */
   water: number;
+  /** Colour of the backdrop copy */
+  text: Rgb;
 }
 
 export interface LiquidRenderer {
@@ -107,11 +110,42 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     transition: gl.getUniformLocation(program, 'uTransition'),
     metal: gl.getUniformLocation(program, 'uMetal'),
     water: gl.getUniformLocation(program, 'uWater'),
+    text: gl.getUniformLocation(program, 'uText'),
+    textColor: gl.getUniformLocation(program, 'uTextColor'),
   };
 
   const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
   const colorData = new Float32Array(BLOB_COUNT * STRIDE);
   const cutData = new Float32Array(CUT_POINTS * STRIDE);
+
+  // Backdrop copy: drawn on a 2D canvas, uploaded as a texture, redrawn only when the
+  // CSS size changes (adaptive quality rescales the GL canvas far more often)
+  const textCanvas = document.createElement('canvas');
+  const textTexture = gl.createTexture();
+  let textSizeKey = '';
+  gl.bindTexture(gl.TEXTURE_2D, textTexture);
+  // Non-power-of-two textures in WebGL 1 need clamping and no mipmaps
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.uniform1i(uniforms.text, 0);
+
+  function updateText(force = false) {
+    const key = `${canvas.clientWidth}x${canvas.clientHeight}`;
+    if (!force && key === textSizeKey) return;
+    textSizeKey = key;
+    drawBackdropText(textCanvas, canvas.clientWidth, canvas.clientHeight);
+    gl!.bindTexture(gl!.TEXTURE_2D, textTexture);
+    // Canvas rows run top-down, GL texture rows bottom-up
+    gl!.pixelStorei(gl!.UNPACK_FLIP_Y_WEBGL, true);
+    gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA, gl!.RGBA, gl!.UNSIGNED_BYTE, textCanvas);
+  }
+
+  backdropFontReady()
+    .then(() => updateText(true))
+    // Fallback face is already drawn; nothing else to do
+    .catch(() => {});
 
   const maxDpr = window.matchMedia('(pointer: coarse)').matches ? MAX_DPR_TOUCH : MAX_DPR_DESKTOP;
 
@@ -119,6 +153,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     const dpr = Math.min(window.devicePixelRatio || 1, maxDpr) * scale;
     const width = Math.round(canvas.clientWidth * dpr);
     const height = Math.round(canvas.clientHeight * dpr);
+    updateText();
     if (canvas.width === width && canvas.height === height) return;
 
     canvas.width = width;
@@ -170,12 +205,14 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform3fv(uniforms.transition, palette.transition);
     gl!.uniform1f(uniforms.metal, palette.metal);
     gl!.uniform1f(uniforms.water, palette.water);
+    gl!.uniform3fv(uniforms.textColor, palette.text);
     gl!.drawArrays(gl!.TRIANGLES, 0, FULLSCREEN_TRIANGLE.length / 2);
   }
 
   // Context is kept alive: StrictMode remounts reuse the same canvas
   function dispose() {
     gl!.deleteBuffer(buffer);
+    gl!.deleteTexture(textTexture);
     gl!.deleteProgram(program);
   }
 

@@ -57,3 +57,5 @@
 - **White → Water**: lens refraction of the backdrop (flipped), thin dark edge, caustic opposite the light, sharp specular.
 - **Silver/Gold** (reference: liquid chrome) on black bg: dome height `sqrt(-d(2R+d))` with blended local radius (exact hemisphere, no cone, smooth necks) + studio env (sky, dark horizon band, soft vertical streak, softbox). Known: small kink can appear on small blobs near large ones.
 - Screenshots desktop + mobile for Pastel/Vivid/Water/Silver/Gold ✅ no console errors, `npm run build` ✅
+- **Chrome flatter**: soft height ceiling `h / (1 + h/0.12)` on the dome (water keeps full dome) → rims stay round, tops level out.
+- **Backdrop text sample** (`backdropText.ts`): copy drawn on a 2D canvas (DM Sans 500, wraps to width, centred), uploaded as texture, redrawn on CSS size change and after the font loads; shader mixes it into the backdrop (ink on light themes, cream on dark), so Water refracts/flips it. Screenshots Water/Pastel/Silver desktop + mobile ✅ `npm run build` ✅

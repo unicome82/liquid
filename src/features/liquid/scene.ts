@@ -1,7 +1,16 @@
 import { COLOR_THEMES, isMetalTheme, type ColorTheme } from '../../shared/settings';
 import type { Blob, Palette, Rgb } from './renderer';
 
-type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream' | 'night' | 'night-soft';
+type ColorToken =
+  | 'sky'
+  | 'butter'
+  | 'peach'
+  | 'pink'
+  | 'lavender'
+  | 'cream'
+  | 'night'
+  | 'night-soft'
+  | 'ink';
 
 // Matches the length of each theme list in `$liquid-themes`
 const THEME_COLOR_COUNT = 6;
@@ -168,6 +177,7 @@ export function buildScene(): Scene {
     bgAccent: readColorToken('pink'),
     shadowTint: readColorToken('lavender'),
     transition: readColorToken('butter'),
+    text: readColorToken('ink'),
   };
   // Chrome needs a dark stage so its reflections read; the drop shadow becomes a dark halo
   const darkPalette = {
@@ -176,6 +186,7 @@ export function buildScene(): Scene {
     bgAccent: readColorToken('night-soft'),
     shadowTint: readColorToken('night'),
     transition: basePalette.transition,
+    text: readColorToken('cream'),
   };
   return {
     getPalette: (theme) => ({

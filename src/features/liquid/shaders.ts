@@ -30,6 +30,8 @@ uniform vec3 uShadowTint;
 uniform vec3 uTransition;
 uniform float uMetal;              // 0–1 blend toward chrome
 uniform float uWater;              // 0–1 blend toward clear water
+uniform sampler2D uText;           // alpha mask of the backdrop copy
+uniform vec3 uTextColor;
 
 // Larger k = fatter necks where blobs meet, which reads as viscous
 const float MERGE_K = 0.28;
@@ -46,6 +48,7 @@ const vec2 SHADOW_OFFSET = vec2(0.025, -0.045);
 const float SHADOW_BLUR = 0.14;
 const float SHADOW_STRENGTH = 0.2;
 const float ACCENT_AMOUNT = 0.2;
+const float TEXT_OPACITY = 0.85;
 
 const vec3 LIGHT_DIR = vec3(-0.45, 0.6, 0.66);
 const float SHADE_MIN = 0.9;
@@ -66,6 +69,8 @@ const float ENV_HORIZON_DARK = 0.92;
 const vec2 ENV_SOFTBOX = vec2(-0.45, 0.55);
 const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
+// Caps how tall chrome swells, so it sits flatter like the pastel liquid
+const float METAL_HEIGHT_CEILING = 0.12;
 const float METAL_EDGE_LIFT = 0.12;
 // Second, softer band left of centre so wide surfaces don't read as one flat grey
 const float ENV_STREAK_X = -0.35;
@@ -182,7 +187,8 @@ vec3 liquidColor(vec2 p) {
 vec3 backdrop(vec2 uv) {
   vec3 bg = mix(uBgBottom, uBgTop, uv.y);
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
-  return mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
+  bg = mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
+  return mix(bg, uTextColor, texture2D(uText, uv).a * TEXT_OPACITY);
 }
 
 vec3 background(vec2 uv, vec2 p, float d) {
@@ -197,10 +203,16 @@ vec3 background(vec2 uv, vec2 p, float d) {
   return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
 }
 
-vec3 domeNormal(vec2 p, float eps) {
-  float h = domeHeight(p);
-  float hx = domeHeight(p + vec2(eps, 0.0));
-  float hy = domeHeight(p + vec2(0.0, eps));
+// Soft ceiling on dome height: rims stay round but tops level out like a puddle.
+// 0 disables it (full hemisphere)
+float flatten(float h, float ceiling) {
+  return ceiling > 0.0 ? h / (1.0 + h / ceiling) : h;
+}
+
+vec3 domeNormal(vec2 p, float eps, float ceiling) {
+  float h = flatten(domeHeight(p), ceiling);
+  float hx = flatten(domeHeight(p + vec2(eps, 0.0)), ceiling);
+  float hy = flatten(domeHeight(p + vec2(0.0, eps)), ceiling);
   return normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 }
 
@@ -243,9 +255,9 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
 
   // Only pay for the dome normal when a material actually uses it
   if (uMetal + uWater <= 0.0) return col;
-  vec3 dome = domeNormal(p, eps);
-  col = mix(col, shadeChrome(base, dome), uMetal);
-  return mix(col, shadeWater(uv, base, dome, l, halfVec), uWater);
+  if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING)), uMetal);
+  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, 0.0), l, halfVec), uWater);
+  return col;
 }
 
 void main() {
