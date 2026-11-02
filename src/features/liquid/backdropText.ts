@@ -51,6 +51,7 @@ export function drawBackdropText(
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
 
   // Wide faces wrap into more lines; shrink until the block clears the logo and edges
   let lines: string[];
@@ -62,7 +63,7 @@ export function drawBackdropText(
   } while (fontSize > MIN_FONT_PX);
   const lineStep = fontSize * LINE_HEIGHT;
   const top = (height - lineStep * (lines.length - 1)) / 2;
-  lines.forEach((line, i) => ctx.fillText(line, margin, top + i * lineStep));
+  lines.forEach((line, i) => ctx.fillText(line, width / 2, top + i * lineStep));
 }
 
 /** Resolves once the backdrop font is usable, so the copy isn't drawn in a fallback face. */

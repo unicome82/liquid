@@ -21,6 +21,7 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const hasOpened = useRef(false);
 
@@ -39,8 +40,16 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
     const closeOnEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false);
     };
+    // Any press outside the sheet closes it, including on the liquid
+    const closeOnOutsidePress = (e: PointerEvent) => {
+      if (!panelRef.current?.contains(e.target as Node)) setIsOpen(false);
+    };
     window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('pointerdown', closeOnOutsidePress);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('pointerdown', closeOnOutsidePress);
+    };
   }, [isOpen]);
 
   const update = <K extends keyof LiquidSettings>(key: K, value: LiquidSettings[K]) =>
@@ -48,7 +57,7 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
 
   return (
     <div className={`control${isOpen ? ' is-open' : ''}`}>
-      <div className="panel" id={panelId} inert={!isOpen}>
+      <div ref={panelRef} className="panel" id={panelId} inert={!isOpen}>
         <div className="tit-wrap">
           <h2 className="tit">Controls</h2>
           <button

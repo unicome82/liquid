@@ -25,6 +25,7 @@
   --ui-ink: #{$color-ink};
   --ui-paper: #{$color-cream};
   --ui-line: #{$color-line};
+  --ui-glass: #{$color-glass};
 }
 
 // Material Symbols: outline by default, `.fill` switches to the filled glyph
@@ -65,6 +66,7 @@ body {
     --ui-ink: #{$color-cream};
     --ui-paper: #{$color-ink};
     --ui-line: #{$color-line-dark};
+    --ui-glass: #{$color-glass-dark};
   }
 
   .canvas,

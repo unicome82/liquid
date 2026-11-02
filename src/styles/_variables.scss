@@ -25,11 +25,16 @@ $color-line-dark: rgba($color-cream, 0.2);
 $color-night: #0b0b0d;
 $color-night-soft: #1c1c22;
 $color-line: rgba($color-ink, 0.15);
+$color-black: #000;
+// Controls backdrop: half-see-through page colour, or black on the chrome themes
+$color-glass: rgba($color-bg, 0.5);
+$color-glass-dark: rgba($color-black, 0.5);
 
 // Theme-aware UI colours (switch on dark backgrounds via CSS custom properties)
 $ui-ink: var(--ui-ink);
 $ui-paper: var(--ui-paper);
 $ui-line: var(--ui-line);
+$ui-glass: var(--ui-glass);
 
 // Fonts
 $font-display: 'Syne', sans-serif;
