@@ -5,6 +5,8 @@ export interface LiquidSettings {
   intensity: number;
   /** Number of blobs on screen */
   amount: number;
+  /** Blob size multiplier, in percent */
+  size: number;
   mode: InteractionMode;
 }
 
@@ -16,10 +18,12 @@ export interface Range {
 
 export const INTENSITY_RANGE: Range = { min: 0, max: 100, step: 1 };
 export const AMOUNT_RANGE: Range = { min: 4, max: 12, step: 1 };
+export const SIZE_RANGE: Range = { min: 50, max: 150, step: 5 };
 
 export const DEFAULT_SETTINGS: LiquidSettings = {
   intensity: 50,
   amount: 8,
+  size: 100,
   mode: 'attract',
 };
 

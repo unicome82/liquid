@@ -3,6 +3,7 @@ import {
   AMOUNT_RANGE,
   INTENSITY_RANGE,
   INTERACTION_MODES,
+  SIZE_RANGE,
   type LiquidSettings,
 } from '../../shared/settings';
 import RangeField from './RangeField';
@@ -45,6 +46,13 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
           value={settings.amount}
           range={AMOUNT_RANGE}
           onChange={(value) => update('amount', value)}
+        />
+        <RangeField
+          label="Size"
+          value={settings.size}
+          range={SIZE_RANGE}
+          unit="%"
+          onChange={(value) => update('size', value)}
         />
         <fieldset className="mode">
           <legend className="label">Mode</legend>
