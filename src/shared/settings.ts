@@ -1,4 +1,4 @@
-export type InteractionMode = 'attract' | 'repel' | 'cut' | 'mix';
+export type InteractionMode = 'attract' | 'repel' | 'cut' | 'twist';
 
 export interface LiquidSettings {
   /** Cursor force + inverse viscosity, in percent */
@@ -27,5 +27,5 @@ export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: s
   { value: 'attract', label: 'Attract', icon: 'compress' },
   { value: 'repel', label: 'Repel', icon: 'expand' },
   { value: 'cut', label: 'Cut', icon: 'content_cut' },
-  { value: 'mix', label: 'Mix', icon: 'blender' },
+  { value: 'twist', label: 'Twist', icon: 'cyclone' },
 ];

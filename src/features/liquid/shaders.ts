@@ -85,10 +85,22 @@ float cutSdf(vec2 p) {
   return d;
 }
 
+// Rotates space more strongly toward the centre, bending the liquid into a spiral.
+// Scene y points up, so a positive angle reads as clockwise on screen.
+vec2 swirlWarp(vec2 p) {
+  vec2 d = p - uSwirl.xy;
+  float t = 1.0 - smoothstep(0.0, uSwirl.w, length(d));
+  float a = uSwirl.z * t * t;
+  float c = cos(a);
+  float s = sin(a);
+  return uSwirl.xy + mat2(c, s, -s, c) * d;
+}
+
 float sceneSdf(vec2 p) {
+  vec2 q = swirlWarp(p);
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    d = smin(d, blobSdf(p, uBlobs[i]), MERGE_K);
+    d = smin(d, blobSdf(q, uBlobs[i]), MERGE_K);
   }
   return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
@@ -112,17 +124,6 @@ vec3 liquidColor(vec2 p) {
   }
   float mixAmount = 1.0 - maxW / total;
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
-}
-
-// Twists only the colour lookup, so mixing marbles the hues without bending the shape.
-// Scene y points up, so a positive angle reads as clockwise on screen.
-vec2 swirlWarp(vec2 p) {
-  vec2 d = p - uSwirl.xy;
-  float t = 1.0 - smoothstep(0.0, uSwirl.w, length(d));
-  float a = uSwirl.z * t * t;
-  float c = cos(a);
-  float s = sin(a);
-  return uSwirl.xy + mat2(c, s, -s, c) * d;
 }
 
 vec3 background(vec2 uv, vec2 p, float d) {
@@ -152,6 +153,7 @@ vec3 shadeLiquid(vec2 p, float d, float px) {
   float nh = max(dot(n, halfVec), 0.0);
   float fresnel = pow(1.0 - n.z, 3.0);
 
+  // Same warp as the shape so colours stay attached to their blobs
   vec3 base = liquidColor(swirlWarp(p));
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
