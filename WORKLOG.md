@@ -71,3 +71,4 @@
 - Panel: clip-path 'grow from button' removed (background looked odd mid-animation); sheet now fades + slides up on its own, toggle stays a plain button. Screenshots desktop + mobile ✅ `npm run build` ✅
 - **Cut smoother**: live tip point follows the pointer between recorded points (groove grows continuously, end kept on release); widths smoothed with neighbours; Catmull-Rom subdivision ×2 → CUT_POINTS 12→25. Tried bounding-box culling of the cut loop → hard seam inside blobs (smax reaches deeper than the box), removed. Perf note for step 6: cut loop now 24 segments per sceneSdf call.
 - **Text see-through**: opaque themes show the backdrop copy at 25%, nudged by the surface normal; chrome shows it as a darker imprint (light text vanished in highlights). Water unchanged. Screenshots Pastel + Silver cut sweep ✅ no console errors, `npm run build` ✅
+- **Text see-through 되돌림**: 불투명 테마(Pastel/Vivid/Silver·Gold) 배경 문구 25% 비침 제거, Water는 기존 굴절로 그대로. `npm run build` ✅
