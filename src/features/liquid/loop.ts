@@ -1,7 +1,7 @@
 import { INTENSITY_RANGE, type ColorTheme, type LiquidSettings } from '../../shared/settings';
 import { LiquidSimulation } from './physics';
 import { PointerTracker } from './pointer';
-import { AdaptiveQuality } from './quality';
+import { AdaptiveQuality, isTouchDevice } from './quality';
 import { createLiquidRenderer } from './renderer';
 import { buildScene, fitScale, type Scene } from './scene';
 
@@ -26,7 +26,9 @@ export function startLiquidLoop(
   }
 
   const simulation = new LiquidSimulation();
-  const quality = new AdaptiveQuality();
+  const quality = new AdaptiveQuality(isTouchDevice());
+  // Live query: toggling the OS setting takes effect without a reload
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const pointer = new PointerTracker(canvas);
   let frameId = 0;
   let lastTime = 0;
@@ -60,6 +62,7 @@ export function startLiquidLoop(
 
     renderer.resize(quality.scale);
     syncLayout(aspect, amount, size, theme);
+    simulation.reduceMotion = reducedMotion.matches;
     simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
     renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.getPalette(theme));
   };

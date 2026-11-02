@@ -35,6 +35,18 @@ canvas {
   max-width: 100%;
 }
 
-:focus:not(:focus-visible) {
+// Focus rings are hidden by design; focus still moves and is announced
+:focus,
+:focus-visible {
   outline: none;
+}
+
+// Honour the OS setting: UI changes snap instead of sliding
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

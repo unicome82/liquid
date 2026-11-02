@@ -82,6 +82,8 @@ export class LiquidSimulation {
   private stretch = new StretchGesture();
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
+  /** Freezes the idle drift and pulse; touch still moves the liquid */
+  reduceMotion = false;
 
   /** Existing bodies flow to their new home; extras fade in, missing ones shrink out. */
   setLayout(layout: Blob[]) {
@@ -122,7 +124,7 @@ export class LiquidSimulation {
     const scaleY = Math.max(1 / aspect, 1);
     const force = lerp(FORCE, intensity);
 
-    this.driftClock += dt * lerp(DRIFT_SPEED, intensity);
+    if (!this.reduceMotion) this.driftClock += dt * lerp(DRIFT_SPEED, intensity);
     const stiffness = lerp(STIFFNESS, intensity);
     const damping = 2 * Math.sqrt(stiffness) * lerp(DAMPING_RATIO, intensity);
     // Layout is in viewport fractions; convert so drift is the same distance on both axes

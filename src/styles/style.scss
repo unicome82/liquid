@@ -83,6 +83,11 @@ body {
     touch-action: none;
   }
 
+  // Read by screen readers only; the visible copy is painted inside the canvas
+  .copy {
+    @include visually-hidden;
+  }
+
   .fallback {
     background: linear-gradient(135deg, $color-sky, $color-butter 45%, $color-peach 70%, $color-pink);
   }
@@ -166,7 +171,8 @@ body {
       transition:
         opacity $duration-base $ease-out,
         transform $duration-slow $ease-out,
-        visibility $duration-slow;
+        // Stays visible while sliding out; on open it flips at once so focus can land inside
+        visibility 0s $duration-slow;
 
       @include mq($bp-tablet) {
         padding: $space-md $space-lg $space-lg;
@@ -186,6 +192,7 @@ body {
         opacity: 1;
         visibility: visible;
         transform: none;
+        transition-delay: 0s;
       }
 
       .btn {
@@ -294,11 +301,6 @@ body {
           border-color: $ui-ink;
           background: $ui-ink;
           color: $ui-paper;
-        }
-
-        &:has(.radio:focus-visible) {
-          outline: $outline-width solid $ui-ink;
-          outline-offset: $outline-width;
         }
       }
 

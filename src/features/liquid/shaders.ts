@@ -23,6 +23,7 @@ uniform vec2 uResolution;
 uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: merge range (0 = default)
 uniform vec3 uColors[BLOB_COUNT];
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
+uniform int uCutCount;             // live points; the rest of uCuts is unused
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
@@ -138,6 +139,8 @@ float taperedSegmentSdf(vec2 p, vec3 a, vec3 b) {
 float cutSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < CUT_POINTS - 1; i++) {
+    // GLSL ES 1.0 needs a constant bound, so stop at the live count instead
+    if (i + 1 >= uCutCount) break;
     // Zero width marks an unused slot (or a fully healed point)
     if (min(uCuts[i].z, uCuts[i + 1].z) <= 0.0) continue;
     // Plain min is seamless here: tapered neighbours share the same radius at each joint
@@ -152,6 +155,8 @@ float sceneSdf(vec2 p) {
     float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
     d = smin(d, blobSdf(p, uBlobs[i]), k);
   }
+  // No groove: skip the carve entirely, it runs for every normal/shadow sample
+  if (uCutCount < 2) return d;
   return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
 

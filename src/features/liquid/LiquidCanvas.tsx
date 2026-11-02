@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LiquidSettings } from '../../shared/settings';
+import { COPY } from './backdropText';
 import { startLiquidLoop } from './loop';
 
 interface LiquidCanvasProps {
@@ -27,8 +28,17 @@ function LiquidCanvas({ settings }: LiquidCanvasProps) {
     }
   }, []);
 
-  if (!isSupported) return <div className="fallback" aria-hidden="true" />;
-  return <canvas ref={canvasRef} className="canvas" aria-hidden="true" />;
+  // The copy only exists as pixels on the canvas, so give screen readers the words
+  return (
+    <>
+      {isSupported ? (
+        <canvas ref={canvasRef} className="canvas" aria-hidden="true" />
+      ) : (
+        <div className="fallback" aria-hidden="true" />
+      )}
+      <p className="copy">{COPY}</p>
+    </>
+  );
 }
 
 export default LiquidCanvas;

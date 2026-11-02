@@ -72,3 +72,9 @@
 - **Cut smoother**: live tip point follows the pointer between recorded points (groove grows continuously, end kept on release); widths smoothed with neighbours; Catmull-Rom subdivision ×2 → CUT_POINTS 12→25. Tried bounding-box culling of the cut loop → hard seam inside blobs (smax reaches deeper than the box), removed. Perf note for step 6: cut loop now 24 segments per sceneSdf call.
 - **Text see-through**: opaque themes show the backdrop copy at 25%, nudged by the surface normal; chrome shows it as a darker imprint (light text vanished in highlights). Water unchanged. Screenshots Pastel + Silver cut sweep ✅ no console errors, `npm run build` ✅
 - **Text see-through 되돌림**: 불투명 테마(Pastel/Vivid/Silver·Gold) 배경 문구 25% 비침 제거, Water는 기존 굴절로 그대로. `npm run build` ✅
+
+## 2026-11-02 · Step 6 — Performance + accessibility
+- **Cut perf**: `uCutCount` uniform — no groove → carve (smax + 24-segment loop) skipped in every sceneSdf call; with a groove the loop stops at the live point count.
+- **Mobile quality**: touch devices start at 0.7× and may drop to 0.4× (desktop 1× / 0.5×). Headless SwiftShader drops straight to the floor (looks soft) — check sharpness/FPS on a real phone.
+- **Reduced motion** (`prefers-reduced-motion`, live): idle drift + radius pulse frozen (touch still moves liquid); CSS transitions/animations off.
+- **A11y**: focus rings hidden everywhere (by request). Backdrop copy given to screen readers as visually-hidden `.copy`. Fixed: desktop open → focus never reached the close button (visibility transition started at hidden) → visibility flips at once on open, delayed on close. Verified Tab → Enter → focus on Close → Esc → focus back on toggle, desktop + mobile(reduced) ✅ cut gesture screenshot ✅ no console errors, `npm run build` ✅

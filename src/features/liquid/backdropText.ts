@@ -1,7 +1,7 @@
 // Sample poster copy behind the liquid; water drops refract it
 const FONT_FAMILY = "'Meie Script', cursive";
 const FONT_WEIGHT = 400;
-const COPY = 'Touch the surface and watch it move, merge and split';
+export const COPY = 'Touch the surface and watch it move, merge and split';
 /** Font size as a fraction of the viewport width; portrait screens need relatively larger type */
 const FONT_SCALE_LANDSCAPE = 0.105;
 const FONT_SCALE_PORTRAIT = 0.17;

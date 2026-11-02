@@ -1,5 +1,6 @@
 import { backdropFontReady, drawBackdropText } from './backdropText';
 import { CUT_POINTS, type CutPoint } from './cut';
+import { isTouchDevice } from './quality';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
 export type Rgb = [number, number, number];
@@ -103,6 +104,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     blobs: gl.getUniformLocation(program, 'uBlobs'),
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
+    cutCount: gl.getUniformLocation(program, 'uCutCount'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -147,7 +149,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     // Fallback face is already drawn; nothing else to do
     .catch(() => {});
 
-  const maxDpr = window.matchMedia('(pointer: coarse)').matches ? MAX_DPR_TOUCH : MAX_DPR_DESKTOP;
+  const maxDpr = isTouchDevice() ? MAX_DPR_TOUCH : MAX_DPR_DESKTOP;
 
   function resize(scale: number) {
     const dpr = Math.min(window.devicePixelRatio || 1, maxDpr) * scale;
@@ -198,6 +200,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform4fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
+    gl!.uniform1i(uniforms.cutCount, Math.min(cuts.length, CUT_POINTS));
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);
