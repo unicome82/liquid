@@ -25,7 +25,6 @@
   --ui-ink: #{$color-ink};
   --ui-paper: #{$color-cream};
   --ui-line: #{$color-line};
-  --ui-glass: #{$color-panel-bg};
 }
 
 // Material Symbols: outline by default, `.fill` switches to the filled glyph
@@ -66,7 +65,6 @@ body {
     --ui-ink: #{$color-cream};
     --ui-paper: #{$color-ink};
     --ui-line: #{$color-line-dark};
-    --ui-glass: #{$color-panel-bg-dark};
   }
 
   .canvas,
@@ -103,65 +101,6 @@ body {
       top: $space-lg;
       left: $space-lg;
       font-size: $font-size-logo-lg;
-    }
-  }
-
-  // Temporary typeface trial
-  .font-select {
-    @include glass;
-    position: absolute;
-    top: $space-md;
-    right: $space-md;
-    z-index: $z-ui;
-    display: flex;
-    align-items: center;
-    gap: $space-xs;
-    padding: $space-xs $space-sm;
-    border-radius: $radius-full;
-    color: $ui-ink;
-
-    @include mq($bp-tablet) {
-      top: $space-lg;
-      right: $space-lg;
-    }
-
-    // Hidden on phones so the pill clears the logo; the select keeps its aria-label
-    .label {
-      display: none;
-      font-size: $font-size-xs;
-      font-weight: $font-weight-medium;
-      letter-spacing: $letter-spacing-label;
-      text-transform: uppercase;
-
-      @include mq($bp-tablet) {
-        display: block;
-      }
-    }
-
-    .select {
-      padding-right: $space-md;
-      margin-right: -$space-md;
-      border: 0;
-      background: transparent;
-      color: inherit;
-      font: inherit;
-      font-size: $font-size-xs;
-      appearance: none;
-
-      @include mq($bp-tablet) {
-        font-size: $font-size-sm;
-      }
-      cursor: pointer;
-
-      option {
-        color: $color-ink;
-      }
-    }
-
-    // Custom arrow; clicks pass through to the select underneath
-    .icon {
-      font-size: $font-size-icon;
-      pointer-events: none;
     }
   }
 
@@ -207,33 +146,59 @@ body {
       }
     }
 
+    // Full-width bottom sheet that grows out of the toggle: closed, it is clipped down to
+    // the button's exact box; opening animates the clip out to the screen edges
     .panel {
       @include glass;
-      position: absolute;
+      position: fixed;
       right: 0;
       bottom: 0;
+      left: 0;
       display: flex;
       flex-direction: column;
       gap: $space-sm;
-      width: min($width-panel, calc(100vw - #{$space-md * 2}));
       padding: $space-sm $space-md $space-md;
-      border-radius: $radius-lg;
       color: $ui-ink;
-      opacity: 0;
       visibility: hidden;
-      transform: translateY($space-xs);
+      clip-path: inset(
+        calc(100% - #{$space-md + $size-btn}) $space-md $space-md calc(100% - #{$space-md + $size-btn})
+          round $radius-full
+      );
       transition:
-        opacity $duration-base $ease-out,
-        transform $duration-base $ease-out,
-        visibility $duration-base;
+        clip-path $duration-slow $ease-out,
+        visibility $duration-slow;
+
+      @include mq($bp-tablet) {
+        padding: $space-md $space-lg $space-lg;
+        clip-path: inset(
+          calc(100% - #{$space-lg + $size-btn}) $space-lg $space-lg calc(100% - #{$space-lg + $size-btn})
+            round $radius-full
+        );
+      }
+
+      > * {
+        opacity: 0;
+        transition: opacity $duration-fast $ease-out;
+      }
+    }
+
+    // Rows reflow into columns on wide screens so the full-width sheet stays short
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(#{$width-field-column}, 1fr));
+      gap: $space-sm $space-lg;
     }
 
     // The panel's own close button replaces the toggle while open
     &.is-open {
       .panel {
-        opacity: 1;
         visibility: visible;
-        transform: none;
+        clip-path: inset(0 round 0);
+
+        > * {
+          opacity: 1;
+          transition-delay: $duration-fast;
+        }
       }
 
       .btn {

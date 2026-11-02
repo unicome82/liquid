@@ -65,3 +65,5 @@
 - Chrome highlights whiten (env 0.85→1.2 blends tint → white) so gold's bright areas read white. Screenshots Gold/Silver desktop + mobile ✅ `npm run build` ✅
 - Panel blur 24px → 8px. `npm run build` ✅
 - **Temporary font select** (top-right, `FontSelect.tsx`): DM Sans / Instrument Serif / Fraunces / Bricolage Grotesque / Unbounded for the backdrop copy; renderer redraws on change and again once the face loads. Copy now shrinks to fit 70% of the height (wide faces overran the logo). Mobile: label hidden + smaller text so the pill clears the logo. Screenshots all fonts desktop, Unbounded mobile ✅ `npm run build` ✅
+- Temporary font select removed; backdrop copy now **Meie Script** (Google Fonts), height-fit kept.
+- **Controls**: no fill / no shadow (glass = blur 8px only). Panel = fixed bottom sheet (left/right/bottom 0, radius 0) that grows out of the toggle via `clip-path: inset(... round full)` → `inset(0)`, content fades in after. Fields wrap into auto-fit columns (min 22rem) so the full-width sheet stays short on desktop. Screenshots closed/mid/open desktop + mobile ✅ `npm run build` ✅

@@ -21,8 +21,6 @@ $color-ink: #2b2b3a;
 
 $color-bg: $color-cream;
 $color-text: $color-ink;
-$color-panel-bg: rgba($color-cream, 0.45);
-$color-panel-bg-dark: rgba($color-ink, 0.45);
 $color-line-dark: rgba($color-cream, 0.2);
 $color-night: #0b0b0d;
 $color-night-soft: #1c1c22;
@@ -32,7 +30,6 @@ $color-line: rgba($color-ink, 0.15);
 $ui-ink: var(--ui-ink);
 $ui-paper: var(--ui-paper);
 $ui-line: var(--ui-line);
-$ui-glass: var(--ui-glass);
 
 // Fonts
 $font-display: 'Syne', sans-serif;
@@ -71,16 +68,16 @@ $size-btn: 3rem;
 $size-thumb: 1rem;
 $size-swatch: 1.5rem;
 $size-track: 0.25rem;
-$width-panel: 28rem;
+$width-field-column: 22rem;
 $width-field-label: 5.5rem;
 $width-field-value: 2.75rem;
 $size-btn-sm: 2rem;
 
 // Effects
 $blur-panel: 8px;
-$shadow-panel: 0 0.75rem 2rem rgba($color-ink, 0.12);
 $duration-fast: 0.2s;
 $duration-base: 0.3s;
+$duration-slow: 0.5s;
 $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
 // Breakpoints

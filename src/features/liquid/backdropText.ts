@@ -1,6 +1,6 @@
-import { BACKDROP_FONTS, DEFAULT_SETTINGS, type BackdropFont } from '../../shared/settings';
-
 // Sample poster copy behind the liquid; water drops refract it
+const FONT_FAMILY = "'Meie Script', cursive";
+const FONT_WEIGHT = 400;
 const COPY = 'Touch the surface and watch it move, merge and split';
 /** Font size as a fraction of the viewport width; portrait screens need relatively larger type */
 const FONT_SCALE_LANDSCAPE = 0.105;
@@ -15,10 +15,7 @@ const MIN_FONT_PX = 12;
 // Text is rendered once per size, so cap the backing resolution to keep uploads light
 const MAX_DPR = 2;
 
-function fontFor(font: BackdropFont, size: number): string {
-  const face = BACKDROP_FONTS.find((item) => item.value === font) ?? BACKDROP_FONTS[0];
-  return `${face.weight} ${size}px ${face.family}`;
-}
+const fontFor = (size: number) => `${FONT_WEIGHT} ${size}px ${FONT_FAMILY}`;
 
 function wrapLines(ctx: CanvasRenderingContext2D, maxWidth: number): string[] {
   const lines: string[] = [];
@@ -41,7 +38,6 @@ export function drawBackdropText(
   target: HTMLCanvasElement,
   cssWidth: number,
   cssHeight: number,
-  font: BackdropFont = DEFAULT_SETTINGS.font,
 ) {
   const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
   target.width = Math.round(cssWidth * dpr);
@@ -59,7 +55,7 @@ export function drawBackdropText(
   // Wide faces wrap into more lines; shrink until the block clears the logo and edges
   let lines: string[];
   do {
-    ctx.font = fontFor(font, fontSize);
+    ctx.font = fontFor(fontSize);
     lines = wrapLines(ctx, width - margin * 2);
     if (lines.length * fontSize * LINE_HEIGHT <= height * MAX_BLOCK_HEIGHT) break;
     fontSize *= SHRINK_STEP;
@@ -70,5 +66,4 @@ export function drawBackdropText(
 }
 
 /** Resolves once the backdrop font is usable, so the copy isn't drawn in a fallback face. */
-export const backdropFontReady = (font: BackdropFont) =>
-  document.fonts.load(fontFor(font, FONT_SCALE_LANDSCAPE * 1000));
+export const backdropFontReady = () => document.fonts.load(fontFor(FONT_SCALE_LANDSCAPE * 1000));

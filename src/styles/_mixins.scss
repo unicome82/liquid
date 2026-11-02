@@ -19,12 +19,11 @@
   justify-content: center;
 }
 
+// Frosted backdrop only; no fill or shadow so the liquid stays visible through it
 @mixin glass {
-  background: $ui-glass;
   // Unprefixed only: the build adds the -webkit- copy for Safari itself. Writing both made
   // the minifier keep just the prefixed one, which Chrome ignores (no blur)
   backdrop-filter: blur($blur-panel);
-  box-shadow: $shadow-panel;
 }
 
 @mixin visually-hidden {

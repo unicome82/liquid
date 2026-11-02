@@ -63,45 +63,47 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
             </span>
           </button>
         </div>
-        <RangeField
-          label="Intensity"
-          value={settings.intensity}
-          range={INTENSITY_RANGE}
-          unit="%"
-          onChange={(value) => update('intensity', value)}
-        />
-        <RangeField
-          label="Amount"
-          value={settings.amount}
-          range={AMOUNT_RANGE}
-          onChange={(value) => update('amount', value)}
-        />
-        <RangeField
-          label="Size"
-          value={settings.size}
-          range={SIZE_RANGE}
-          unit="%"
-          onChange={(value) => update('size', value)}
-        />
-        <OptionGroup
-          label="Mode"
-          value={settings.mode}
-          options={INTERACTION_MODES}
-          renderVisual={(mode) => (
-            <span className="material-symbols-outlined icon" aria-hidden="true">
-              {MODE_ICONS[mode]}
-            </span>
-          )}
-          onChange={(mode) => update('mode', mode)}
-        />
-        <OptionGroup
-          label="Color"
-          value={settings.theme}
-          options={COLOR_THEMES}
-          renderVisual={(theme) => <span className={`swatch is-${theme}`} aria-hidden="true" />}
-          onChange={(theme) => update('theme', theme)}
-          isSwatch
-        />
+        <div className="fields">
+          <RangeField
+            label="Intensity"
+            value={settings.intensity}
+            range={INTENSITY_RANGE}
+            unit="%"
+            onChange={(value) => update('intensity', value)}
+          />
+          <RangeField
+            label="Amount"
+            value={settings.amount}
+            range={AMOUNT_RANGE}
+            onChange={(value) => update('amount', value)}
+          />
+          <RangeField
+            label="Size"
+            value={settings.size}
+            range={SIZE_RANGE}
+            unit="%"
+            onChange={(value) => update('size', value)}
+          />
+          <OptionGroup
+            label="Mode"
+            value={settings.mode}
+            options={INTERACTION_MODES}
+            renderVisual={(mode) => (
+              <span className="material-symbols-outlined icon" aria-hidden="true">
+                {MODE_ICONS[mode]}
+              </span>
+            )}
+            onChange={(mode) => update('mode', mode)}
+          />
+          <OptionGroup
+            label="Color"
+            value={settings.theme}
+            options={COLOR_THEMES}
+            renderVisual={(theme) => <span className={`swatch is-${theme}`} aria-hidden="true" />}
+            onChange={(theme) => update('theme', theme)}
+            isSwatch
+          />
+        </div>
       </div>
       <button
         ref={toggleRef}
