@@ -47,3 +47,4 @@
 - **Grain**: shader film grain 0.035, 24 fps pattern change, frame index wrapped (sin precision).
 - **Hint** (`features/hint`): per-mode guide bottom-left, fades on first press on the liquid (panel clicks ignored), returns on mode change. `aria-live="polite"`.
 - Verified (headless): hint opacity 1 → 0 after press, desktop + mobile; colours stay pastel at 18 s; no console errors. `npm run build` ✅
+- **Revised**: grain, hint and colour cycle removed (colours static). 6 liquid colours (sky, mint, lavender, pink, peach, coral; mint/coral tokens added) assigned per load by cycling a shuffled palette over blob order → any amount uses all colours evenly, 6 largest blobs all differ; landscape/portrait share the assignment. Screenshots desktop + mobile ✅ no console errors, `npm run build` ✅

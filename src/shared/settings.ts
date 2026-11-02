@@ -23,15 +23,9 @@ export const DEFAULT_SETTINGS: LiquidSettings = {
   mode: 'attract',
 };
 
-export const INTERACTION_MODES: {
-  value: InteractionMode;
-  label: string;
-  icon: string;
-  /** Shown as the on-screen guide while this mode is active */
-  hint: string;
-}[] = [
-  { value: 'attract', label: 'Attract', icon: 'compress', hint: 'Press and drag to gather the liquid' },
-  { value: 'repel', label: 'Repel', icon: 'expand', hint: 'Press and drag to push the liquid away' },
-  { value: 'cut', label: 'Cut', icon: 'content_cut', hint: 'Press and drag across the liquid to cut it' },
-  { value: 'stretch', label: 'Stretch', icon: 'open_in_full', hint: 'Grab an edge and pull to stretch a strand' },
+export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: string }[] = [
+  { value: 'attract', label: 'Attract', icon: 'compress' },
+  { value: 'repel', label: 'Repel', icon: 'expand' },
+  { value: 'cut', label: 'Cut', icon: 'content_cut' },
+  { value: 'stretch', label: 'Stretch', icon: 'open_in_full' },
 ];

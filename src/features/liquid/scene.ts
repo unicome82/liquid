@@ -1,45 +1,46 @@
-import { createColorCycle } from './colorCycle';
 import type { Blob, Palette, Rgb } from './renderer';
 
-type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream';
+type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream' | 'mint' | 'coral';
+
+// Liquid colours; butter and cream are left out because they sit on the background
+const LIQUID_COLORS: ColorToken[] = ['sky', 'mint', 'lavender', 'pink', 'peach', 'coral'];
 
 interface BlobSpec {
   /** Fraction of the viewport's shorter side */
   radius: number;
-  color: ColorToken;
 }
 
-// Sizes and colours follow the reference; positions are scattered fresh on every load.
+// Sizes follow the reference; positions and colours are randomised on every load.
 // Roughly largest first: the amount setting takes the first N, and big blobs placed
 // first claim space so the small ones fill the gaps.
 const LANDSCAPE_BLOBS: BlobSpec[] = [
-  { radius: 0.3, color: 'sky' },
-  { radius: 0.22, color: 'peach' },
-  { radius: 0.22, color: 'sky' },
-  { radius: 0.13, color: 'sky' },
-  { radius: 0.17, color: 'pink' },
-  { radius: 0.17, color: 'sky' },
-  { radius: 0.13, color: 'pink' },
-  { radius: 0.1, color: 'lavender' },
-  { radius: 0.07, color: 'lavender' },
-  { radius: 0.06, color: 'peach' },
-  { radius: 0.08, color: 'pink' },
-  { radius: 0.045, color: 'sky' },
+  { radius: 0.3 },
+  { radius: 0.22 },
+  { radius: 0.22 },
+  { radius: 0.13 },
+  { radius: 0.17 },
+  { radius: 0.17 },
+  { radius: 0.13 },
+  { radius: 0.1 },
+  { radius: 0.07 },
+  { radius: 0.06 },
+  { radius: 0.08 },
+  { radius: 0.045 },
 ];
 
 const PORTRAIT_BLOBS: BlobSpec[] = [
-  { radius: 0.42, color: 'sky' },
-  { radius: 0.28, color: 'peach' },
-  { radius: 0.32, color: 'sky' },
-  { radius: 0.2, color: 'sky' },
-  { radius: 0.26, color: 'pink' },
-  { radius: 0.2, color: 'sky' },
-  { radius: 0.16, color: 'pink' },
-  { radius: 0.12, color: 'lavender' },
-  { radius: 0.08, color: 'lavender' },
-  { radius: 0.08, color: 'peach' },
-  { radius: 0.06, color: 'pink' },
-  { radius: 0.05, color: 'sky' },
+  { radius: 0.42 },
+  { radius: 0.28 },
+  { radius: 0.32 },
+  { radius: 0.2 },
+  { radius: 0.26 },
+  { radius: 0.2 },
+  { radius: 0.16 },
+  { radius: 0.12 },
+  { radius: 0.08 },
+  { radius: 0.08 },
+  { radius: 0.06 },
+  { radius: 0.05 },
 ];
 
 // Representative screen shapes, used only to judge spacing while scattering
@@ -65,15 +66,33 @@ function readColorToken(token: ColorToken): Rgb {
   ];
 }
 
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Cycles a shuffled palette by blob order, so any first-N slice (the amount setting)
+ * uses every colour about equally, and the biggest blobs never share a colour.
+ */
+function pickColors(count: number): Rgb[] {
+  const palette = shuffle(LIQUID_COLORS).map(readColorToken);
+  return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
+}
+
 const randomCoord = () => -EDGE_OVERFLOW + Math.random() * (1 + EDGE_OVERFLOW * 2);
 
 /** Picks, from a few random spots, the one with the most room between it and placed blobs. */
-function scatter(specs: BlobSpec[], aspect: number): Blob[] {
+function scatter(specs: BlobSpec[], aspect: number, colors: Rgb[]): Blob[] {
   const scaleX = Math.max(aspect, 1);
   const scaleY = Math.max(1 / aspect, 1);
   const placed: Blob[] = [];
 
-  for (const spec of specs) {
+  for (const [index, spec] of specs.entries()) {
     let best = { x: randomCoord(), y: randomCoord() };
     let bestGap = -Infinity;
     for (let i = 0; i < PLACEMENT_CANDIDATES && placed.length > 0; i++) {
@@ -91,7 +110,7 @@ function scatter(specs: BlobSpec[], aspect: number): Blob[] {
         best = candidate;
       }
     }
-    placed.push({ ...best, radius: spec.radius, color: readColorToken(spec.color) });
+    placed.push({ ...best, radius: spec.radius, color: colors[index] });
   }
   return placed;
 }
@@ -99,16 +118,13 @@ function scatter(specs: BlobSpec[], aspect: number): Blob[] {
 export interface Scene {
   palette: Palette;
   getBlobs: (aspect: number, count: number) => Blob[];
-  /** Returns copies of the blobs with colours shifted along the palette loop at `time` seconds */
-  cycleColors: (blobs: Blob[], time: number) => Blob[];
 }
 
-// Order of the colour drift; neighbours are close hues so blends stay clean
-const COLOR_LOOP: ColorToken[] = ['sky', 'lavender', 'pink', 'peach'];
-
 export function buildScene(): Scene {
-  const landscape = scatter(LANDSCAPE_BLOBS, LANDSCAPE_ASPECT);
-  const portrait = scatter(PORTRAIT_BLOBS, PORTRAIT_ASPECT);
+  // Shared so a blob keeps its colour when the screen rotates
+  const colors = pickColors(LANDSCAPE_BLOBS.length);
+  const landscape = scatter(LANDSCAPE_BLOBS, LANDSCAPE_ASPECT, colors);
+  const portrait = scatter(PORTRAIT_BLOBS, PORTRAIT_ASPECT, colors);
   const palette: Palette = {
     bgTop: readColorToken('cream'),
     bgBottom: readColorToken('butter'),
@@ -119,6 +135,5 @@ export function buildScene(): Scene {
   return {
     palette,
     getBlobs: (aspect, count) => (aspect < 1 ? portrait : landscape).slice(0, count),
-    cycleColors: createColorCycle(COLOR_LOOP.map(readColorToken)),
   };
 }

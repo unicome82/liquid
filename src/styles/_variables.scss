@@ -4,6 +4,8 @@ $color-butter: #fff3a1;
 $color-peach: #ffc58a;
 $color-pink: #f79ac9;
 $color-lavender: #c9a2f2;
+$color-mint: #9ee6c7;
+$color-coral: #ff9f8f;
 $color-cream: #fdf9ee;
 $color-ink: #2b2b3a;
 
@@ -11,7 +13,6 @@ $color-bg: $color-cream;
 $color-text: $color-ink;
 $color-panel-bg: rgba($color-cream, 0.72);
 $color-line: rgba($color-ink, 0.15);
-$color-text-muted: rgba($color-ink, 0.72);
 
 // Fonts
 $font-display: 'Syne', sans-serif;
@@ -49,14 +50,12 @@ $size-btn: 3rem;
 $size-thumb: 1rem;
 $size-track: 0.25rem;
 $width-panel: 17.5rem;
-$offset-hint: 0.5rem;
 
 // Effects
 $blur-panel: 16px;
 $shadow-panel: 0 0.75rem 2rem rgba($color-ink, 0.12);
 $duration-fast: 0.2s;
 $duration-base: 0.3s;
-$duration-slow: 0.6s;
 $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
 // Breakpoints

@@ -26,8 +26,7 @@ export interface Palette {
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  /** @param time seconds since start, for animated grain */
-  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette, time: number) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -102,7 +101,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
     shadowTint: gl.getUniformLocation(program, 'uShadowTint'),
     transition: gl.getUniformLocation(program, 'uTransition'),
-    time: gl.getUniformLocation(program, 'uTime'),
   };
 
   const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
@@ -152,7 +150,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     });
   }
 
-  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette, time: number) {
+  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette) {
     packBlobs(blobs);
     packCuts(cuts);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
@@ -164,7 +162,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);
     gl!.uniform3fv(uniforms.shadowTint, palette.shadowTint);
     gl!.uniform3fv(uniforms.transition, palette.transition);
-    gl!.uniform1f(uniforms.time, time);
     gl!.drawArrays(gl!.TRIANGLES, 0, FULLSCREEN_TRIANGLE.length / 2);
   }
 
