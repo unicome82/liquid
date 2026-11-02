@@ -75,7 +75,8 @@
 
 ## 2026-11-02 · Step 6 — Performance + accessibility
 - **Cut perf**: `uCutCount` uniform — no groove → carve (smax + 24-segment loop) skipped in every sceneSdf call; with a groove the loop stops at the live point count.
-- **Mobile quality**: touch devices start at 0.7× and may drop to 0.4× (desktop 1× / 0.5×). Headless SwiftShader drops straight to the floor (looks soft) — check sharpness/FPS on a real phone.
+- **Mobile quality**: touch devices may drop to 0.4×, starting at 0.7× (desktop 1× / 0.5×). Headless SwiftShader drops straight to the floor (looks soft) — check sharpness/FPS on a real phone.
 - **Reduced motion** (`prefers-reduced-motion`, live): idle drift + radius pulse frozen (touch still moves liquid); CSS transitions/animations off.
 - **A11y**: focus rings hidden everywhere (by request). Backdrop copy given to screen readers as visually-hidden `.copy`. Fixed: desktop open → focus never reached the close button (visibility transition started at hidden) → visibility flips at once on open, delayed on close. Verified Tab → Enter → focus on Close → Esc → focus back on toggle, desktop + mobile(reduced) ✅ cut gesture screenshot ✅ no console errors, `npm run build` ✅
 - **Deploy**: GitHub Pages workflow (`.github/workflows/deploy.yml`) — builds with `--base=./` on push to main.
+- **Mobile too blurry on a real phone** → touch starts at 1× and floors at 0.7× (≈1 px per CSS px with the 1.5 DPR cap). `npm run build` ✅
