@@ -1,4 +1,5 @@
 import type { InteractionMode } from '../../shared/settings';
+import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
 
 interface Body {
@@ -62,22 +63,38 @@ const FORCE: Span = { min: 1, max: 4 };
 const TAP_IMPULSE = 0.6;
 /** 1/s — how strongly blobs are dragged along with the pointer's motion */
 const STIR = 2;
-// Inside this distance attract/swirl ease off so the direction can't flip-flop at the center
+// Inside this distance attract eases off so the direction can't flip-flop at the center
 const CORE_RADIUS = 0.08;
 
+/** Pointer-repel share applied along a cut so the liquid visibly parts */
+const CUT_PUSH = 0.3;
+
 export const MAX_DROPLETS = 4;
-const DRIP_INTERVAL = 0.1;
-/** Short-side units/s the pointer must move before droplets shed */
-const DRIP_MIN_SPEED = 0.3;
-const DRIP_FULL_SPEED = 2;
-const DROPLET_RADIUS: Span = { min: 0.025, max: 0.05 };
-/** Share of the pointer's velocity a droplet inherits when flung off */
-const DROPLET_FLING = 0.6;
-// Weaker than body springs so droplets ooze back rather than snap
-const DROPLET_RETURN_STIFFNESS = 2;
-const DROPLET_LIFETIME = 3;
-// Droplets usually spawn over liquid; without a grace period they'd be absorbed instantly
-const DROPLET_MIN_AGE = 0.6;
+/** Ink cursor blob */
+const INK_BLOBS = 1;
+/** Shader slots needed on top of the layout blobs */
+export const EXTRA_BLOBS = MAX_DROPLETS + INK_BLOBS;
+
+/** Seconds between drips while the pointer hovers a blob in melt mode */
+const MELT_INTERVAL = 0.35;
+// Drips start just inside the bottom edge so they peel off with a neck
+const MELT_SPAWN_DEPTH = 0.85;
+const MELT_SPAWN_JITTER = 0.5;
+/** Drip size relative to its source blob */
+const MELT_DROP_SCALE: Span = { min: 0.25, max: 0.4 };
+/** Short-side units/s² */
+const MELT_GRAVITY = 0.8;
+/** 1/s — viscous drag so drips ooze rather than free-fall */
+const MELT_DRAG = 1.5;
+const MELT_LIFETIME = 2.5;
+
+/** Ink cursor radius, short-side units */
+const INK_RADIUS: Span = { min: 0.03, max: 0.045 };
+const INK_STIFFNESS = 60;
+// Slightly underdamped so the ink lags and wobbles behind the pointer
+const INK_DAMPING_RATIO = 0.7;
+/** 1/s — how fast the ink takes on the colour of the liquid it's near */
+const INK_COLOR_RATE = 4;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
@@ -90,7 +107,21 @@ function wave(t: number, phase: number): number {
 export class LiquidSimulation {
   private bodies: Body[] = [];
   private droplets: Droplet[] = [];
-  private dripCooldown = 0;
+  private meltCooldown = 0;
+  private dropCount = 0;
+  private cutTrail = new CutTrail();
+  private ink: Body = {
+    homeX: 0,
+    homeY: 0,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    radius: 0,
+    targetRadius: 0,
+    color: [1, 1, 1],
+    phase: 0,
+  };
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
 
@@ -156,55 +187,98 @@ export class LiquidSimulation {
 
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
 
-    if (mode === 'drip') this.shedDroplets(dt, pointer, scaleX, scaleY);
-    this.stepDroplets(dt, radiusBlend, damping, scaleX, scaleY);
+    if (mode === 'melt') this.shedDrips(dt, pointer, intensity, scaleX, scaleY);
+    this.stepDrips(dt, radiusBlend, scaleY);
+    this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
+    this.stepInk(dt, pointer, mode, intensity, radiusBlend, scaleX, scaleY);
   }
 
-  private shedDroplets(dt: number, pointer: PointerInput, scaleX: number, scaleY: number) {
-    this.dripCooldown -= dt;
-    if (!pointer.active || this.dripCooldown > 0 || this.droplets.length >= MAX_DROPLETS) return;
-
-    const speed = Math.hypot(pointer.vx * scaleX, pointer.vy * scaleY);
-    if (!pointer.tapped && speed < DRIP_MIN_SPEED) return;
+  // Peels a drip off the bottom of the blob under the pointer
+  private shedDrips(
+    dt: number,
+    pointer: PointerInput,
+    intensity: number,
+    scaleX: number,
+    scaleY: number,
+  ) {
+    this.meltCooldown -= dt;
+    if (pointer.tapped) this.meltCooldown = 0;
+    if (!pointer.active || this.meltCooldown > 0 || this.droplets.length >= MAX_DROPLETS) return;
 
     const source = this.nearestBody(pointer.x, pointer.y, scaleX, scaleY);
     if (!source) return;
+    const edge =
+      Math.hypot((source.x - pointer.x) * scaleX, (source.y - pointer.y) * scaleY) - source.radius;
+    if (edge > INFLUENCE_RADIUS) return;
 
-    const speedRatio = Math.min(speed / DRIP_FULL_SPEED, 1);
+    const jitter = Math.sin(this.dropCount * GOLDEN_ANGLE) * source.radius * MELT_SPAWN_JITTER;
     this.droplets.push({
-      homeX: pointer.x,
-      homeY: pointer.y,
-      x: pointer.x,
-      y: pointer.y,
-      vx: pointer.vx * DROPLET_FLING,
-      vy: pointer.vy * DROPLET_FLING,
+      homeX: 0,
+      homeY: 0,
+      x: source.x + jitter / scaleX,
+      y: source.y + (source.radius * MELT_SPAWN_DEPTH) / scaleY,
+      vx: source.vx,
+      vy: source.vy,
       radius: 0,
-      targetRadius: lerp(DROPLET_RADIUS, speedRatio),
+      targetRadius: source.radius * lerp(MELT_DROP_SCALE, intensity),
       color: source.color,
       phase: 0,
       age: 0,
     });
-    this.dripCooldown = DRIP_INTERVAL;
+    this.dropCount++;
+    this.meltCooldown = MELT_INTERVAL;
   }
 
-  // Droplets ooze back to the nearest blob and shrink away once absorbed
-  private stepDroplets(dt: number, radiusBlend: number, damping: number, scaleX: number, scaleY: number) {
+  // Drips fall under gravity and taper away; anything below the screen is dropped
+  private stepDrips(dt: number, radiusBlend: number, scaleY: number) {
     for (const drop of this.droplets) {
       drop.age += dt;
-      const host = this.nearestBody(drop.x, drop.y, scaleX, scaleY);
-      if (host) {
-        drop.vx += ((host.x - drop.x) * DROPLET_RETURN_STIFFNESS - drop.vx * damping) * dt;
-        drop.vy += ((host.y - drop.y) * DROPLET_RETURN_STIFFNESS - drop.vy * damping) * dt;
-        const distance = Math.hypot((host.x - drop.x) * scaleX, (host.y - drop.y) * scaleY);
-        if (drop.age > DROPLET_MIN_AGE && distance < host.radius) drop.targetRadius = 0;
-      }
-      if (drop.age > DROPLET_LIFETIME) drop.targetRadius = 0;
-
+      drop.vy += (MELT_GRAVITY / scaleY - drop.vy * MELT_DRAG) * dt;
+      drop.vx -= drop.vx * MELT_DRAG * dt;
       drop.x += drop.vx * dt;
       drop.y += drop.vy * dt;
+      if (drop.age > MELT_LIFETIME) drop.targetRadius = 0;
       drop.radius += (drop.targetRadius - drop.radius) * radiusBlend;
     }
-    this.droplets = this.droplets.filter((d) => d.targetRadius > 0 || d.radius > RADIUS_EPSILON);
+    this.droplets = this.droplets.filter(
+      (d) => (d.targetRadius > 0 || d.radius > RADIUS_EPSILON) && d.y - d.radius / scaleY < 1,
+    );
+  }
+
+  // Ink is hidden while cutting so it doesn't fill the groove it's carving
+  private stepInk(
+    dt: number,
+    pointer: PointerInput,
+    mode: InteractionMode,
+    intensity: number,
+    radiusBlend: number,
+    scaleX: number,
+    scaleY: number,
+  ) {
+    const ink = this.ink;
+    const isVisible = pointer.active && mode !== 'cut';
+    ink.targetRadius = isVisible ? lerp(INK_RADIUS, intensity) : 0;
+
+    // Appear at the pointer rather than flying in from wherever it last vanished
+    if (ink.radius < RADIUS_EPSILON && isVisible) {
+      ink.x = pointer.x;
+      ink.y = pointer.y;
+      ink.vx = 0;
+      ink.vy = 0;
+    }
+
+    const damping = 2 * Math.sqrt(INK_STIFFNESS) * INK_DAMPING_RATIO;
+    ink.vx += ((pointer.x - ink.x) * INK_STIFFNESS - ink.vx * damping) * dt;
+    ink.vy += ((pointer.y - ink.y) * INK_STIFFNESS - ink.vy * damping) * dt;
+    ink.x += ink.vx * dt;
+    ink.y += ink.vy * dt;
+    ink.radius += (ink.targetRadius - ink.radius) * radiusBlend;
+
+    const host = this.nearestBody(ink.x, ink.y, scaleX, scaleY);
+    if (host) {
+      const blend = 1 - Math.exp(-INK_COLOR_RATE * dt);
+      ink.color = ink.color.map((c, i) => c + (host.color[i] - c) * blend) as Rgb;
+    }
   }
 
   private nearestBody(x: number, y: number, scaleX: number, scaleY: number): Body | undefined {
@@ -231,7 +305,13 @@ export class LiquidSimulation {
       color: body.color,
     }));
     const droplets = this.droplets.map(({ x, y, radius, color }) => ({ x, y, radius, color }));
-    return [...bodies, ...droplets];
+    const { x, y, radius, color } = this.ink;
+    const ink = radius > RADIUS_EPSILON ? [{ x, y, radius, color }] : [];
+    return [...bodies, ...droplets, ...ink];
+  }
+
+  getCuts(): CutPoint[] {
+    return this.cutTrail.getPoints();
   }
 }
 
@@ -241,11 +321,11 @@ function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, 
       return [-nx, -ny];
     case 'repel':
       return [nx, ny];
-    case 'swirl':
-      return [-ny, nx];
-    case 'drip':
-      // Drip only stirs and sheds droplets; no radial force
-      return [0, 0];
+    case 'cut':
+      return [nx * CUT_PUSH, ny * CUT_PUSH];
+    case 'melt':
+      // Short-side space has y pointing down the screen, so this is gravity
+      return [0, 1];
   }
 }
 
@@ -265,7 +345,7 @@ function applyPointer(
   if (edge >= INFLUENCE_RADIUS || distance === 0) return;
 
   const falloff = (1 - edge / INFLUENCE_RADIUS) ** 2;
-  const core = mode === 'repel' ? 1 : Math.min(distance / CORE_RADIUS, 1);
+  const core = mode === 'attract' ? Math.min(distance / CORE_RADIUS, 1) : 1;
   const [dirX, dirY] = modeDirection(mode, dx / distance, dy / distance);
 
   let dvx = dirX * force * falloff * core * dt;

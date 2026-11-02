@@ -1,8 +1,9 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
-import { MAX_DROPLETS } from './physics';
+import { CUT_POINTS } from './cut';
+import { EXTRA_BLOBS } from './physics';
 
-// Shader arrays are fixed-size, so allocate for the largest amount plus drip droplets
-export const BLOB_COUNT = AMOUNT_RANGE.max + MAX_DROPLETS;
+// Shader arrays are fixed-size, so allocate for the largest amount plus drips and ink
+export const BLOB_COUNT = AMOUNT_RANGE.max + EXTRA_BLOBS;
 
 export const VERTEX_SHADER = `
 attribute vec2 aPosition;
@@ -16,10 +17,12 @@ export const FRAGMENT_SHADER = `
 precision highp float;
 
 #define BLOB_COUNT ${BLOB_COUNT}
+#define CUT_POINTS ${CUT_POINTS}
 
 uniform vec2 uResolution;
 uniform vec3 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius
 uniform vec3 uColors[BLOB_COUNT];
+uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
@@ -28,6 +31,8 @@ uniform vec3 uTransition;
 
 // Larger k = fatter necks where blobs meet, which reads as viscous
 const float MERGE_K = 0.28;
+// Rounds the lips of a cut so it reads as parted liquid, not a hard slice
+const float CUT_SMOOTH = 0.04;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
 // How quickly neighbouring blob colours fade into each other
@@ -59,12 +64,33 @@ float blobSdf(vec2 p, vec3 blob) {
   return length(p - blob.xy) - blob.z;
 }
 
+float smax(float a, float b, float k) {
+  return -smin(-a, -b, k);
+}
+
+float segmentSdf(vec2 p, vec2 a, vec2 b) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+
+float cutSdf(vec2 p) {
+  float d = 1e5;
+  for (int i = 0; i < CUT_POINTS - 1; i++) {
+    float width = min(uCuts[i].z, uCuts[i + 1].z);
+    if (width <= 0.0) continue;
+    d = min(d, segmentSdf(p, uCuts[i].xy, uCuts[i + 1].xy) - width);
+  }
+  return d;
+}
+
 float sceneSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
     d = smin(d, blobSdf(p, uBlobs[i]), MERGE_K);
   }
-  return d;
+  return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
 
 // Circular profile so the rim curves down like a droplet edge

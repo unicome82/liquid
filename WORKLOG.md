@@ -31,3 +31,6 @@
 - Verified (headless): attract pulls center ball, repel pushes it into right column.
 - Known: drip droplets spawn but merge back immediately (MERGE_K 0.28 > droplet gap) — not visible as separate drops.
 - `npm run build` ✅
+- Modes revised: swirl/drip → **cut** (`cut.ts` trail carves a groove via shader smax, heals in 0.9s) / **melt** (gravity sag + drips peel off blob bottom, fall and taper).
+- **Ink** cursor blob in all modes except cut (springs after pointer, takes nearby liquid colour). BLOB_COUNT = 12 + 4 drips + 1 ink.
+- Verified (headless): ink merges into ball, cut groove visible, melt sags blob downward. `npm run build` ✅

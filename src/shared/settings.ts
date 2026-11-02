@@ -1,4 +1,4 @@
-export type InteractionMode = 'attract' | 'repel' | 'swirl' | 'drip';
+export type InteractionMode = 'attract' | 'repel' | 'cut' | 'melt';
 
 export interface LiquidSettings {
   /** Cursor force + inverse viscosity, in percent */
@@ -26,6 +26,6 @@ export const DEFAULT_SETTINGS: LiquidSettings = {
 export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: string }[] = [
   { value: 'attract', label: 'Attract', icon: 'compress' },
   { value: 'repel', label: 'Repel', icon: 'expand' },
-  { value: 'swirl', label: 'Swirl', icon: 'cyclone' },
-  { value: 'drip', label: 'Drip', icon: 'water_drop' },
+  { value: 'cut', label: 'Cut', icon: 'content_cut' },
+  { value: 'melt', label: 'Melt', icon: 'water_drop' },
 ];
