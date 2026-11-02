@@ -38,3 +38,4 @@
 - Mode melt → **mix**: stirred blobs blend colours toward their shared average (recover 0.08/s) + shader colour-only swirl warp (marbling) that follows stroke turning direction; liquid also spins tangentially. Melt drips removed (BLOB_COUNT = 12). `npm run build` ✅
 - Mode mix → **twist**: colour mixing removed; swirl warp now applied to the SDF (shape + colour spiral), max 8 rad, unwinds at 0.5/s. Direct render at angle 5 shows clear spiral ✅ `npm run build` ✅
 - Random layout per load: fixed x/y removed, `scatter()` best-candidate sampling (16 candidates, 5% edge overflow) keeps sizes/colours from the reference. Two loads differ ✅ desktop + mobile screenshots ✅ `npm run build` ✅
+- Cut smoothing: per-segment min width caused stepped notches → tapered capsules (width lerps along segment, plain min — smin added scallops). CUT_SMOOTH 0.04→0.1, width 0.02–0.06, ease-out heal. Direct render before/after ✅ `npm run build` ✅

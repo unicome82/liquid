@@ -32,7 +32,7 @@ uniform vec3 uTransition;
 // Larger k = fatter necks where blobs meet, which reads as viscous
 const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
-const float CUT_SMOOTH = 0.04;
+const float CUT_SMOOTH = 0.1;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
 // How quickly neighbouring blob colours fade into each other
@@ -68,19 +68,21 @@ float smax(float a, float b, float k) {
   return -smin(-a, -b, k);
 }
 
-float segmentSdf(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
+// Capsule whose radius blends from a.z to b.z, so the groove tapers without steps
+float taperedSegmentSdf(vec2 p, vec3 a, vec3 b) {
+  vec2 pa = p - a.xy;
+  vec2 ba = b.xy - a.xy;
   float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
-  return length(pa - ba * h);
+  return length(pa - ba * h) - mix(a.z, b.z, h);
 }
 
 float cutSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < CUT_POINTS - 1; i++) {
-    float width = min(uCuts[i].z, uCuts[i + 1].z);
-    if (width <= 0.0) continue;
-    d = min(d, segmentSdf(p, uCuts[i].xy, uCuts[i + 1].xy) - width);
+    // Zero width marks an unused slot (or a fully healed point)
+    if (min(uCuts[i].z, uCuts[i + 1].z) <= 0.0) continue;
+    // Plain min is seamless here: tapered neighbours share the same radius at each joint
+    d = min(d, taperedSegmentSdf(p, uCuts[i], uCuts[i + 1]));
   }
   return d;
 }

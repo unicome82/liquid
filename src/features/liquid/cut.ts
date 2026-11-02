@@ -25,7 +25,8 @@ const SPACING = 0.04;
 const MAX_JUMP = 0.3;
 /** Seconds until the groove has fully closed up */
 const LIFETIME = 0.9;
-const WIDTH: Span = { min: 0.012, max: 0.04 };
+// Wider than the visible groove: the rounded lips (CUT_SMOOTH in the shader) eat into it
+const WIDTH: Span = { min: 0.02, max: 0.06 };
 const WIDTH_INTENSITY: Span = { min: 0.6, max: 1.4 };
 const FULL_SPEED = 2;
 
@@ -63,6 +64,11 @@ export class CutTrail {
   }
 
   getPoints(): CutPoint[] {
-    return this.points.map(({ x, y, width, age }) => ({ x, y, width: width * (1 - age / LIFETIME) }));
+    // Ease-out: the groove closes quickly at first, then oozes shut
+    return this.points.map(({ x, y, width, age }) => ({
+      x,
+      y,
+      width: width * (1 - age / LIFETIME) ** 2,
+    }));
   }
 }
