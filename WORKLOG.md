@@ -80,3 +80,4 @@
 - **A11y**: focus rings hidden everywhere (by request). Backdrop copy given to screen readers as visually-hidden `.copy`. Fixed: desktop open → focus never reached the close button (visibility transition started at hidden) → visibility flips at once on open, delayed on close. Verified Tab → Enter → focus on Close → Esc → focus back on toggle, desktop + mobile(reduced) ✅ cut gesture screenshot ✅ no console errors, `npm run build` ✅
 - **Deploy**: GitHub Pages workflow (`.github/workflows/deploy.yml`) — builds with `--base=./` on push to main.
 - **Mobile too blurry on a real phone** → touch starts at 1× and floors at 0.7× (≈1 px per CSS px with the 1.5 DPR cap). `npm run build` ✅
+- **Copyright**: bottom-left `COPYRIGHT ⓒ 2026 UNI` (2xs, aligned to the toggle row, under the open sheet). Screenshots desktop Pastel + mobile Silver ✅ `npm run build` ✅

@@ -111,6 +111,26 @@ body {
     }
   }
 
+  // Bottom-left, centred on the controls toggle's row
+  .copyright {
+    position: absolute;
+    bottom: $space-md;
+    left: $space-md;
+    z-index: $z-ui;
+    display: flex;
+    align-items: center;
+    height: $size-btn;
+    pointer-events: none;
+    font-family: $font-body;
+    font-size: $font-size-2xs;
+    letter-spacing: $letter-spacing-label;
+
+    @include mq($bp-tablet) {
+      bottom: $space-lg;
+      left: $space-lg;
+    }
+  }
+
   .control {
     position: absolute;
     right: $space-md;
