@@ -33,8 +33,8 @@ const float TRANSITION_LIFT = 0.65;
 
 const vec2 SHADOW_OFFSET = vec2(0.025, -0.045);
 const float SHADOW_BLUR = 0.14;
-const float SHADOW_STRENGTH = 0.35;
-const float ACCENT_AMOUNT = 0.35;
+const float SHADOW_STRENGTH = 0.2;
+const float ACCENT_AMOUNT = 0.2;
 
 const vec3 LIGHT_DIR = vec3(-0.45, 0.6, 0.66);
 const float SHADE_MIN = 0.9;

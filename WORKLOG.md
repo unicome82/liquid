@@ -9,3 +9,4 @@
 - Fix: GLSL ES 1.0 rejected array index via function param → pass blob vec3 instead.
 - Tuned: grey hue blends → lift toward butter; thin necks → MERGE_K 0.28; separate portrait layout.
 - `npm run build` ✅ / screenshots desktop + mobile ✅
+- Color tweak: sky → pastel #7ec8f8, butter → brighter #fff3a1; shadow 0.35→0.2, pink accent 0.35→0.2 (yellow read as beige). Screenshots ✅
