@@ -148,8 +148,7 @@ body {
       }
     }
 
-    // Full-width bottom sheet that grows out of the toggle: closed, it is clipped down to
-    // the button's exact box; opening animates the clip out to the screen edges
+    // Full-width bottom sheet; slides up independently of the toggle button
     .panel {
       @include glass;
       position: fixed;
@@ -161,26 +160,16 @@ body {
       gap: $space-sm;
       padding: $space-sm $space-md $space-md;
       color: $ui-ink;
+      opacity: 0;
       visibility: hidden;
-      clip-path: inset(
-        calc(100% - #{$space-md + $size-btn}) $space-md $space-md calc(100% - #{$space-md + $size-btn})
-          round $radius-full
-      );
+      transform: translateY(100%);
       transition:
-        clip-path $duration-slow $ease-out,
+        opacity $duration-base $ease-out,
+        transform $duration-slow $ease-out,
         visibility $duration-slow;
 
       @include mq($bp-tablet) {
         padding: $space-md $space-lg $space-lg;
-        clip-path: inset(
-          calc(100% - #{$space-lg + $size-btn}) $space-lg $space-lg calc(100% - #{$space-lg + $size-btn})
-            round $radius-full
-        );
-      }
-
-      > * {
-        opacity: 0;
-        transition: opacity $duration-fast $ease-out;
       }
     }
 
@@ -194,13 +183,9 @@ body {
     // The panel's own close button replaces the toggle while open
     &.is-open {
       .panel {
+        opacity: 1;
         visibility: visible;
-        clip-path: inset(0 round 0);
-
-        > * {
-          opacity: 1;
-          transition-delay: $duration-fast;
-        }
+        transform: none;
       }
 
       .btn {
