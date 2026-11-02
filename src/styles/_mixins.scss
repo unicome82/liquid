@@ -21,8 +21,9 @@
 
 @mixin glass {
   background: $ui-glass;
+  // Unprefixed only: the build adds the -webkit- copy for Safari itself. Writing both made
+  // the minifier keep just the prefixed one, which Chrome ignores (no blur)
   backdrop-filter: blur($blur-panel);
-  -webkit-backdrop-filter: blur($blur-panel);
   box-shadow: $shadow-panel;
 }
 

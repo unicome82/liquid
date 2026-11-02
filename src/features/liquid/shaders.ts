@@ -75,6 +75,8 @@ const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
 // Caps how tall chrome swells, so it sits flatter like the pastel liquid
 const float METAL_HEIGHT_CEILING = 0.12;
+const float METAL_WHITE_START = 0.85;
+const float METAL_WHITE_END = 1.2;
 const float METAL_EDGE_LIFT = 0.12;
 // Second, softer band left of centre so wide surfaces don't read as one flat grey
 const float ENV_STREAK_X = -0.35;
@@ -229,7 +231,10 @@ vec3 domeNormal(vec2 p, float eps, float ceiling) {
 
 vec3 shadeChrome(vec3 base, vec3 n) {
   vec3 r = reflect(vec3(0.0, 0.0, -1.0), n);
-  vec3 col = base * envLight(r);
+  float light = envLight(r);
+  // Bright reflections wash out the metal's tint, so gold's highlights read white, not cream
+  float whiten = smoothstep(METAL_WHITE_START, METAL_WHITE_END, light);
+  vec3 col = mix(base * light, vec3(light), whiten);
   // Grazing angles reflect more, so rims brighten toward white
   return col + (1.0 - n.z) * METAL_EDGE_LIFT;
 }
