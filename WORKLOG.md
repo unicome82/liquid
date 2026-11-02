@@ -59,3 +59,5 @@
 - Screenshots desktop + mobile for Pastel/Vivid/Water/Silver/Gold ✅ no console errors, `npm run build` ✅
 - **Chrome flatter**: soft height ceiling `h / (1 + h/0.12)` on the dome (water keeps full dome) → rims stay round, tops level out.
 - **Backdrop text sample** (`backdropText.ts`): copy drawn on a 2D canvas (DM Sans 500, wraps to width, centred), uploaded as texture, redrawn on CSS size change and after the font loads; shader mixes it into the backdrop (ink on light themes, cream on dark), so Water refracts/flips it. Screenshots Water/Pastel/Silver desktop + mobile ✅ `npm run build` ✅
+- **Water = thin film**: refraction 0.06 (no flip) through a flattened dome (ceiling 0.05) → text reads as directly beneath, only the rim bends it.
+- **Chrome layered/brighter**: env facing 0.9 (more white) + 5 stacked horizontal dark bands → nested contour lines along rims. Screenshots Water/Silver/Gold desktop + mobile ✅ `npm run build` ✅

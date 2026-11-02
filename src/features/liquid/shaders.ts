@@ -60,12 +60,16 @@ const float RIM_STRENGTH = 0.45;
 const float NORMAL_SAMPLE_PX = 2.0;
 
 // Chrome reflects a fake studio: bright sky, dark horizon band, dim floor, one softbox
-const float ENV_FACING = 0.55;
-const float ENV_SKY = 0.4;
-const float ENV_FLOOR = 0.3;
-const float ENV_HORIZON_Y = -0.3;
-const float ENV_HORIZON_WIDTH = 0.1;
-const float ENV_HORIZON_DARK = 0.92;
+const float ENV_FACING = 0.9;
+const float ENV_SKY = 0.35;
+const float ENV_FLOOR = 0.45;
+// Stacked dark bands (reflection height, width, darkness), like a studio's window frames;
+// each one repeats along the rim, which gives the layered contour lines of liquid chrome
+const vec3 ENV_BAND_1 = vec3(-0.3, 0.07, 0.9);
+const vec3 ENV_BAND_2 = vec3(0.32, 0.045, 0.65);
+const vec3 ENV_BAND_3 = vec3(-0.58, 0.05, 0.6);
+const vec3 ENV_BAND_4 = vec3(0.62, 0.035, 0.5);
+const vec3 ENV_BAND_5 = vec3(-0.82, 0.04, 0.45);
 const vec2 ENV_SOFTBOX = vec2(-0.45, 0.55);
 const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
@@ -78,8 +82,10 @@ const float ENV_STREAK_WIDTH = 0.4;
 const float ENV_STREAK_DARK = 0.3;
 
 // Water bends the background through the drop and catches a sharp highlight
-// Negative: a drop acts like a lens and flips what is behind it
-const float WATER_REFRACTION = -0.25;
+// A thin film lying on the text: the flat middle shows it undistorted, only the
+// curved rim bends it
+const float WATER_REFRACTION = 0.06;
+const float WATER_HEIGHT_CEILING = 0.05;
 const float WATER_TINT = 0.5;
 const float WATER_CAUSTIC = 0.18;
 const float WATER_EDGE_DARK = 0.35;
@@ -88,11 +94,16 @@ const float WATER_SPECULAR_POWER = 220.0;
 const float WATER_SPECULAR_STRENGTH = 1.1;
 
 // Brightness reflected along r (r.z > 0 points back toward the viewer)
+float envBand(float y, vec3 band) {
+  float t = (y - band.x) / band.y;
+  return 1.0 - band.z * exp(-t * t);
+}
+
 float envLight(vec3 r) {
   float v = ENV_FACING + ENV_SKY * smoothstep(0.0, 0.8, r.y);
-  v = mix(v, ENV_FLOOR, smoothstep(-0.1, -0.8, r.y));
-  float band = (r.y - ENV_HORIZON_Y) / ENV_HORIZON_WIDTH;
-  v *= 1.0 - ENV_HORIZON_DARK * exp(-band * band);
+  v = mix(v, ENV_FLOOR, smoothstep(-0.2, -0.9, r.y));
+  v *= envBand(r.y, ENV_BAND_1) * envBand(r.y, ENV_BAND_2) * envBand(r.y, ENV_BAND_3);
+  v *= envBand(r.y, ENV_BAND_4) * envBand(r.y, ENV_BAND_5);
   float streak = (r.x - ENV_STREAK_X) / ENV_STREAK_WIDTH;
   v *= 1.0 - ENV_STREAK_DARK * exp(-streak * streak);
   vec2 toBox = r.xy - ENV_SOFTBOX;
@@ -256,7 +267,7 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   // Only pay for the dome normal when a material actually uses it
   if (uMetal + uWater <= 0.0) return col;
   if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING)), uMetal);
-  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, 0.0), l, halfVec), uWater);
+  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, WATER_HEIGHT_CEILING), l, halfVec), uWater);
   return col;
 }
 
