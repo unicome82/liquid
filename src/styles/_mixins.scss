@@ -1,0 +1,37 @@
+@use 'variables' as *;
+
+@mixin mq($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin full-screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Frosted, half-see-through fill; no shadow
+@mixin glass {
+  background: $ui-glass;
+  // Unprefixed only: the build adds the -webkit- copy for Safari itself. Writing both made
+  // the minifier keep just the prefixed one, which Chrome ignores (no blur)
+  backdrop-filter: blur($blur-panel);
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

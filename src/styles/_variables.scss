@@ -1,0 +1,93 @@
+// Colors — sampled from the reference image
+$color-sky: #7ec8f8;
+$color-butter: #fff3a1;
+$color-peach: #ffc58a;
+$color-pink: #f79ac9;
+$color-lavender: #c9a2f2;
+$color-mint: #9ee6c7;
+$color-coral: #ff9f8f;
+
+// Liquid colour themes: six colours each, assigned randomly per blob
+$liquid-themes: (
+  "pastel": ($color-sky, $color-mint, $color-lavender, $color-pink, $color-peach, $color-coral),
+  "vivid": (#1e9bff, #00c98d, #8a5cff, #ff3d8b, #ff8a1f, #ff4a3d),
+  // Water colours tint what is seen through the drop
+  "water": (#eef8ff, #e6f4fd, #f2faff, #e0f1fb, #ebf7ff, #f5fbff),
+  "silver": (#e6e8ec, #dcdfe4, #eceef1, #d6dae0, #e2e5e9, #dfe2e7),
+  "gold": (#f5c75a, #edbb4c, #f8d273, #e8b244, #f2c255, #f9d57e),
+);
+$color-cream: #fdf9ee;
+$color-ink: #2b2b3a;
+
+$color-bg: $color-cream;
+$color-text: $color-ink;
+$color-line-dark: rgba($color-cream, 0.2);
+$color-night: #0b0b0d;
+$color-night-soft: #1c1c22;
+$color-line: rgba($color-ink, 0.15);
+$color-black: #000;
+// Controls backdrop: half-see-through page colour, or black on the chrome themes
+$color-glass: rgba($color-bg, 0.5);
+$color-glass-dark: rgba($color-black, 0.5);
+
+// Theme-aware UI colours (switch on dark backgrounds via CSS custom properties)
+$ui-ink: var(--ui-ink);
+$ui-paper: var(--ui-paper);
+$ui-line: var(--ui-line);
+$ui-glass: var(--ui-glass);
+
+// Fonts
+$font-display: 'Syne', sans-serif;
+$font-body: 'DM Sans', sans-serif;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 800;
+$font-size-logo: 1.5rem;
+$font-size-logo-lg: 2rem;
+$letter-spacing-logo: 0.12em;
+$letter-spacing-label: 0.08em;
+$font-size-2xs: 0.6875rem;
+$font-size-xs: 0.75rem;
+$font-size-sm: 0.875rem;
+$font-size-icon: 1.25rem;
+$font-size-icon-lg: 1.5rem;
+
+// Spacing
+$space-2xs: 0.25rem;
+$space-xs: 0.5rem;
+$space-sm: 1rem;
+$space-md: 1.5rem;
+$space-lg: 2.5rem;
+
+// Radii
+$radius-sm: 0.5rem;
+$radius-md: 1rem;
+$radius-lg: 1.25rem;
+$radius-full: 999px;
+
+// Sizes
+$border-width: 1px;
+$scale-hover: 1.06;
+$size-btn: 3rem;
+$size-thumb: 1rem;
+$size-swatch: 1.5rem;
+$size-track: 0.25rem;
+$width-field-column: 22rem;
+$width-field-label: 5.5rem;
+$width-field-value: 2.75rem;
+$size-btn-sm: 2rem;
+
+// Effects
+$blur-panel: 8px;
+$duration-fast: 0.2s;
+$duration-base: 0.3s;
+$duration-slow: 0.5s;
+$ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+// Breakpoints
+$bp-tablet: 768px;
+$bp-desktop: 1200px;
+
+// Layers
+$z-canvas: 0;
+$z-ui: 10;

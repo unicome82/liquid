@@ -1,0 +1,351 @@
+@use 'sass:list';
+@use 'reset';
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:root {
+  // Exposed so the WebGL renderer reads the same tokens as the CSS
+  --color-sky: #{$color-sky};
+  --color-butter: #{$color-butter};
+  --color-peach: #{$color-peach};
+  --color-pink: #{$color-pink};
+  --color-lavender: #{$color-lavender};
+  --color-mint: #{$color-mint};
+  --color-coral: #{$color-coral};
+
+  @each $name, $colors in $liquid-themes {
+    @for $i from 1 through list.length($colors) {
+      --liquid-#{$name}-#{$i}: #{list.nth($colors, $i)};
+    }
+  }
+  --color-cream: #{$color-cream};
+  --color-ink: #{$color-ink};
+  --color-night: #{$color-night};
+  --color-night-soft: #{$color-night-soft};
+  --ui-ink: #{$color-ink};
+  --ui-paper: #{$color-cream};
+  --ui-line: #{$color-line};
+  --ui-glass: #{$color-glass};
+}
+
+// Material Symbols: outline by default, `.fill` switches to the filled glyph
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0;
+
+  &.fill {
+    font-variation-settings: 'FILL' 1;
+  }
+}
+
+.tit-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: $color-bg;
+  color: $color-text;
+  font-family: $font-body;
+  -webkit-font-smoothing: antialiased;
+}
+
+.liquid {
+  @include full-screen;
+  overflow: hidden;
+  color: $ui-ink;
+
+  // Dark backgrounds (metal themes) flip the UI to light-on-dark
+  &.is-dark {
+    --ui-ink: #{$color-cream};
+    --ui-paper: #{$color-ink};
+    --ui-line: #{$color-line-dark};
+    --ui-glass: #{$color-glass-dark};
+  }
+
+  .canvas,
+  .fallback {
+    position: absolute;
+    inset: 0;
+    z-index: $z-canvas;
+    width: 100%;
+    height: 100%;
+  }
+
+  .canvas {
+    // Let drags drive the liquid instead of scrolling or zooming the page
+    touch-action: none;
+  }
+
+  // Read by screen readers only; the visible copy is painted inside the canvas
+  .copy {
+    @include visually-hidden;
+  }
+
+  .fallback {
+    background: linear-gradient(135deg, $color-sky, $color-butter 45%, $color-peach 70%, $color-pink);
+  }
+
+  .logo {
+    position: absolute;
+    top: $space-md;
+    left: $space-md;
+    z-index: $z-ui;
+    font-family: $font-display;
+    // Decorative overlay; pointer input should reach the liquid beneath
+    pointer-events: none;
+    font-size: $font-size-logo;
+    font-weight: $font-weight-bold;
+    letter-spacing: $letter-spacing-logo;
+
+    @include mq($bp-tablet) {
+      top: $space-lg;
+      left: $space-lg;
+      font-size: $font-size-logo-lg;
+    }
+  }
+
+  .control {
+    position: absolute;
+    right: $space-md;
+    bottom: $space-md;
+    z-index: $z-ui;
+
+    @include mq($bp-tablet) {
+      right: $space-lg;
+      bottom: $space-lg;
+    }
+
+    .btn,
+    .close {
+      @include flex-center;
+      border-radius: $radius-full;
+      color: $ui-ink;
+      transition: transform $duration-fast $ease-out;
+
+      &:hover {
+        transform: scale($scale-hover);
+      }
+    }
+
+    .btn {
+      @include glass;
+      width: $size-btn;
+      height: $size-btn;
+
+      .icon {
+        font-size: $font-size-icon-lg;
+      }
+    }
+
+    .close {
+      width: $size-btn-sm;
+      height: $size-btn-sm;
+
+      .icon {
+        font-size: $font-size-icon;
+      }
+    }
+
+    // Full-width bottom sheet; slides up independently of the toggle button
+    .panel {
+      @include glass;
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: $space-sm;
+      padding: $space-sm $space-md $space-md;
+      color: $ui-ink;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(100%);
+      transition:
+        opacity $duration-base $ease-out,
+        transform $duration-slow $ease-out,
+        // Stays visible while sliding out; on open it flips at once so focus can land inside
+        visibility 0s $duration-slow;
+
+      @include mq($bp-tablet) {
+        padding: $space-md $space-lg $space-lg;
+      }
+    }
+
+    // Rows reflow into columns on wide screens so the full-width sheet stays short
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(#{$width-field-column}, 1fr));
+      gap: $space-sm $space-lg;
+    }
+
+    // The panel's own close button replaces the toggle while open
+    &.is-open {
+      .panel {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition-delay: 0s;
+      }
+
+      .btn {
+        visibility: hidden;
+      }
+    }
+
+    .tit {
+      font-family: $font-display;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      letter-spacing: $letter-spacing-label;
+      text-transform: uppercase;
+    }
+
+    .label,
+    .value {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      letter-spacing: $letter-spacing-label;
+      text-transform: uppercase;
+    }
+
+    // Label | control | value on a single line
+    .field,
+    .options {
+      display: grid;
+      grid-template-columns: $width-field-label 1fr;
+      align-items: center;
+      gap: $space-sm;
+    }
+
+    .field {
+      grid-template-columns: $width-field-label 1fr $width-field-value;
+
+      .value {
+        text-align: right;
+      }
+    }
+
+    .range {
+      width: 100%;
+      height: $size-thumb;
+      background: transparent;
+      appearance: none;
+      cursor: pointer;
+
+      &::-webkit-slider-runnable-track {
+        height: $size-track;
+        border-radius: $radius-full;
+        background: linear-gradient(to right, $ui-ink var(--progress), $ui-line var(--progress));
+      }
+
+      &::-moz-range-track {
+        height: $size-track;
+        border-radius: $radius-full;
+        background: linear-gradient(to right, $ui-ink var(--progress), $ui-line var(--progress));
+      }
+
+      &::-webkit-slider-thumb {
+        width: $size-thumb;
+        height: $size-thumb;
+        margin-top: calc((#{$size-track} - #{$size-thumb}) / 2);
+        border: 0;
+        border-radius: $radius-full;
+        background: $ui-ink;
+        appearance: none;
+      }
+
+      &::-moz-range-thumb {
+        width: $size-thumb;
+        height: $size-thumb;
+        border: 0;
+        border-radius: $radius-full;
+        background: $ui-ink;
+      }
+    }
+
+    .options {
+      .list {
+        display: flex;
+        gap: $space-2xs;
+      }
+
+      .item {
+        position: relative;
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        align-items: center;
+        gap: $space-2xs;
+        padding: $space-xs $space-2xs;
+        border: $border-width solid $ui-line;
+        border-radius: $radius-sm;
+        font-size: $font-size-2xs;
+        cursor: pointer;
+        transition:
+          background $duration-fast $ease-out,
+          color $duration-fast $ease-out;
+
+        &:hover {
+          border-color: $ui-ink;
+        }
+
+        &.is-active {
+          border-color: $ui-ink;
+          background: $ui-ink;
+          color: $ui-paper;
+        }
+      }
+
+      .radio,
+      .is-hidden {
+        @include visually-hidden;
+      }
+
+      .icon {
+        font-size: $font-size-icon;
+      }
+
+      // Colour choices are swatch-only round buttons
+      &.is-swatch {
+        .list {
+          gap: $space-xs;
+        }
+
+        .item {
+          flex: none;
+          padding: $space-2xs;
+          border-color: transparent;
+          border-radius: $radius-full;
+
+          &.is-active {
+            border-color: $ui-ink;
+            background: transparent;
+          }
+        }
+      }
+
+      .swatch {
+        display: block;
+        width: $size-swatch;
+        height: $size-swatch;
+        border: $border-width solid $ui-line;
+        border-radius: $radius-full;
+
+        @each $name, $colors in $liquid-themes {
+          &.is-#{$name} {
+            // Repeat the first colour so the wheel closes without a seam
+            background: conic-gradient(list.append($colors, list.nth($colors, 1), comma)...);
+          }
+        }
+      }
+    }
+  }
+}

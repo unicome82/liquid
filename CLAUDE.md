@@ -68,8 +68,8 @@
 - Define design tokens (colors, fonts, spacing, radii) before building UI.
 
 ## Project (fill in)
-- Stack: React + SCSS (default when no other requirement is given)
-- Run:
-- Build / lint / test:
-- Key folders:
-- Notes:
+- Stack: React + TypeScript + SCSS (Vite), raw WebGL (no 3D library)
+- Run: `npm run dev`
+- Build / lint / test: `npm run build` (tsc type check + vite build)
+- Key folders: `src/features/liquid/` (WebGL canvas, shaders, scene layout), `src/styles/` (`_reset`, `_variables`, `_mixins`, `style.scss`)
+- Notes: Single full-screen page, no scroll. All page styles live in `style.scss` (no `_layout`/`_common`/`_main`).
