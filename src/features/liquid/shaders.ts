@@ -49,6 +49,10 @@ const float SHADOW_BLUR = 0.14;
 const float SHADOW_STRENGTH = 0.2;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
+// How much of the backdrop copy shows through opaque liquid
+const float SEE_THROUGH = 0.25;
+const float SEE_THROUGH_REFRACTION = 0.04;
+const float SEE_THROUGH_METAL_SHADE = 0.45;
 
 const vec3 LIGHT_DIR = vec3(-0.45, 0.6, 0.66);
 const float SHADE_MIN = 0.9;
@@ -250,6 +254,15 @@ vec3 shadeWater(vec2 uv, vec3 tint, vec3 n, vec3 l, vec3 halfVec) {
   return seen + pow(max(dot(n, halfVec), 0.0), WATER_SPECULAR_POWER) * WATER_SPECULAR_STRENGTH;
 }
 
+// Opaque themes still let the backdrop copy ghost through, bent slightly at the rim.
+// Chrome shows it as a darker imprint, since light text would vanish in its highlights.
+vec3 showTextThrough(vec3 col, vec2 uv, vec3 n) {
+  float mask = texture2D(uText, uv - n.xy * SEE_THROUGH_REFRACTION).a;
+  vec3 ink = mix(uTextColor, col * SEE_THROUGH_METAL_SHADE, uMetal);
+  // Water already shows the copy through its own refraction
+  return mix(col, ink, mask * SEE_THROUGH * (1.0 - uWater));
+}
+
 vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
   float h = heightFromSdf(d);
@@ -270,10 +283,9 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   col += pow(nh, SPECULAR_POWER) * SPECULAR_STRENGTH;
 
   // Only pay for the dome normal when a material actually uses it
-  if (uMetal + uWater <= 0.0) return col;
   if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING)), uMetal);
   if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, WATER_HEIGHT_CEILING), l, halfVec), uWater);
-  return col;
+  return showTextThrough(col, uv, n);
 }
 
 void main() {
