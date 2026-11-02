@@ -1,3 +1,4 @@
+import { createColorCycle } from './colorCycle';
 import type { Blob, Palette, Rgb } from './renderer';
 
 type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream';
@@ -98,7 +99,12 @@ function scatter(specs: BlobSpec[], aspect: number): Blob[] {
 export interface Scene {
   palette: Palette;
   getBlobs: (aspect: number, count: number) => Blob[];
+  /** Returns copies of the blobs with colours shifted along the palette loop at `time` seconds */
+  cycleColors: (blobs: Blob[], time: number) => Blob[];
 }
+
+// Order of the colour drift; neighbours are close hues so blends stay clean
+const COLOR_LOOP: ColorToken[] = ['sky', 'lavender', 'pink', 'peach'];
 
 export function buildScene(): Scene {
   const landscape = scatter(LANDSCAPE_BLOBS, LANDSCAPE_ASPECT);
@@ -113,5 +119,6 @@ export function buildScene(): Scene {
   return {
     palette,
     getBlobs: (aspect, count) => (aspect < 1 ? portrait : landscape).slice(0, count),
+    cycleColors: createColorCycle(COLOR_LOOP.map(readColorToken)),
   };
 }

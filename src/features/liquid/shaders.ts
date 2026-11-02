@@ -28,6 +28,7 @@ uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
 uniform vec3 uShadowTint;
 uniform vec3 uTransition;
+uniform float uTime;               // seconds since start; drives grain
 
 // Larger k = fatter necks where blobs meet, which reads as viscous
 const float MERGE_K = 0.28;
@@ -39,6 +40,12 @@ const float BEVEL = 0.12;
 const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
 const float TRANSITION_LIFT = 0.65;
+
+// Film grain strength; just enough to break gradient banding and add paper texture
+const float GRAIN_AMOUNT = 0.035;
+// New grain pattern this many times per second (film-like flicker without per-frame noise)
+const float GRAIN_FPS = 24.0;
+const float GRAIN_PATTERNS = 64.0;
 
 const vec2 SHADOW_OFFSET = vec2(0.025, -0.045);
 const float SHADOW_BLUR = 0.14;
@@ -117,6 +124,17 @@ vec3 liquidColor(vec2 p) {
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
 }
 
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 addGrain(vec3 c) {
+  // Wrapped so the hash input stays small; large sin() arguments lose precision on GPUs
+  float frame = mod(floor(uTime * GRAIN_FPS), GRAIN_PATTERNS);
+  float n = hash(gl_FragCoord.xy + frame * vec2(17.0, 31.0)) - 0.5;
+  return c + n * GRAIN_AMOUNT;
+}
+
 vec3 background(vec2 uv, vec2 p, float d) {
   vec3 bg = mix(uBgBottom, uBgTop, uv.y);
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
@@ -162,11 +180,7 @@ void main() {
   vec3 bg = background(uv, p, d);
   float coverage = 1.0 - smoothstep(-px, px, d);
 
-  if (coverage <= 0.0) {
-    gl_FragColor = vec4(bg, 1.0);
-    return;
-  }
-
-  gl_FragColor = vec4(mix(bg, shadeLiquid(p, d, px), coverage), 1.0);
+  vec3 col = coverage > 0.0 ? mix(bg, shadeLiquid(p, d, px), coverage) : bg;
+  gl_FragColor = vec4(addGrain(col), 1.0);
 }
 `;

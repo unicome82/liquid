@@ -81,6 +81,42 @@ body {
     }
   }
 
+  .hint {
+    position: absolute;
+    left: $space-md;
+    bottom: $space-md;
+    z-index: $z-ui;
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    // Keep clear of the panel toggle on narrow screens
+    max-width: calc(100% - #{$size-btn} - #{$space-md * 3});
+    min-height: $size-btn;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY($offset-hint);
+    transition:
+      opacity $duration-slow $ease-out,
+      transform $duration-slow $ease-out;
+
+    &.is-visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    @include mq($bp-tablet) {
+      left: $space-lg;
+      bottom: $space-lg;
+    }
+
+    .icon {
+      font-size: $font-size-icon;
+    }
+  }
+
   .control {
     position: absolute;
     right: $space-md;

@@ -41,3 +41,9 @@
 - Cut smoothing: per-segment min width caused stepped notches → tapered capsules (width lerps along segment, plain min — smin added scallops). CUT_SMOOTH 0.04→0.1, width 0.02–0.06, ease-out heal. Direct render before/after ✅ `npm run build` ✅
 - Mode twist → **stretch** (`stretch.ts`): press near a blob edge pulls a 6-blob strand + tip; snaps past 0.35–0.6 su (intensity), tip oozes home, beads retract; release before snap = rubber-band recoil. Per-blob merge range (uBlobs vec4.w, strand 0.08) keeps the thread thin; blobs < 0.012 hidden (dimple dots). Twist/swirl code removed. BLOB_COUNT = 12 + 9.
 - Verified via direct sim drive: pull → thin neck, snap → beads + flying tip ✅ Faint beading ridges remain on long strands. `npm run build` ✅
+
+## 2026-11-02 · Step 5 — Details
+- **Colour cycle** (`colorCycle.ts`): blobs drift sky → lavender → pink → peach, 15 s per step, eased. First tried shader YIQ hue rotation → went lime/teal (off-palette), replaced with palette loop.
+- **Grain**: shader film grain 0.035, 24 fps pattern change, frame index wrapped (sin precision).
+- **Hint** (`features/hint`): per-mode guide bottom-left, fades on first press on the liquid (panel clicks ignored), returns on mode change. `aria-live="polite"`.
+- Verified (headless): hint opacity 1 → 0 after press, desktop + mobile; colours stay pastel at 18 s; no console errors. `npm run build` ✅
