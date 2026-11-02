@@ -1,9 +1,14 @@
+import { COLOR_THEMES, type ColorTheme } from '../../shared/settings';
 import type { Blob, Palette, Rgb } from './renderer';
 
-type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream' | 'mint' | 'coral';
+type ColorToken = 'sky' | 'butter' | 'peach' | 'pink' | 'lavender' | 'cream';
 
-// Liquid colours; butter and cream are left out because they sit on the background
-const LIQUID_COLORS: ColorToken[] = ['sky', 'mint', 'lavender', 'pink', 'peach', 'coral'];
+// Matches the length of each theme list in `$liquid-themes`
+const THEME_COLOR_COUNT = 6;
+// Metallic themes swap the soft liquid shading for a mirror-like reflection
+const METALLIC_THEMES: ColorTheme[] = ['silver', 'gold'];
+// Single-hue themes skip the butter lift between colours, which would tint them yellow
+const MONO_THEMES: ColorTheme[] = ['white', 'silver', 'gold'];
 
 interface BlobSpec {
   /** Fraction of the viewport's shorter side */
@@ -52,12 +57,16 @@ const EDGE_OVERFLOW = 0.05;
 const PLACEMENT_CANDIDATES = 16;
 
 const HEX_PATTERN = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
+const SHORT_HEX_PATTERN = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i;
+
+// Sass minifies colours like #ffffff to #fff, so expand them before parsing
+const expandShortHex = (value: string) => value.replace(SHORT_HEX_PATTERN, '#$1$1$2$2$3$3');
 const CHANNEL_MAX = 255;
 
-function readColorToken(token: ColorToken): Rgb {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(`--color-${token}`).trim();
-  const match = HEX_PATTERN.exec(value);
-  if (!match) throw new Error(`Invalid color token --color-${token}: "${value}"`);
+function readCssColor(name: string): Rgb {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+  const match = HEX_PATTERN.exec(expandShortHex(value));
+  if (!match) throw new Error(`Invalid color token --${name}: "${value}"`);
 
   return [
     parseInt(match[1], 16) / CHANNEL_MAX,
@@ -76,21 +85,32 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 /**
- * Cycles a shuffled palette by blob order, so any first-N slice (the amount setting)
+ * Cycles shuffled colour slots by blob order, so any first-N slice (the amount setting)
  * uses every colour about equally, and the biggest blobs never share a colour.
+ * Slots (not colours) are stored so switching theme recolours without reshuffling.
  */
-function pickColors(count: number): Rgb[] {
-  const palette = shuffle(LIQUID_COLORS).map(readColorToken);
-  return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
+function pickColorSlots(count: number): number[] {
+  const slots = shuffle(Array.from({ length: THEME_COLOR_COUNT }, (_, i) => i));
+  return Array.from({ length: count }, (_, i) => slots[i % slots.length]);
+}
+
+const readColorToken = (token: ColorToken) => readCssColor(`color-${token}`);
+
+function readThemeColors(theme: ColorTheme): Rgb[] {
+  return Array.from({ length: THEME_COLOR_COUNT }, (_, i) => readCssColor(`liquid-${theme}-${i + 1}`));
 }
 
 const randomCoord = () => -EDGE_OVERFLOW + Math.random() * (1 + EDGE_OVERFLOW * 2);
 
 /** Picks, from a few random spots, the one with the most room between it and placed blobs. */
-function scatter(specs: BlobSpec[], aspect: number, colors: Rgb[]): Blob[] {
+interface PlacedBlob extends Omit<Blob, 'color'> {
+  colorSlot: number;
+}
+
+function scatter(specs: BlobSpec[], aspect: number, colorSlots: number[]): PlacedBlob[] {
   const scaleX = Math.max(aspect, 1);
   const scaleY = Math.max(1 / aspect, 1);
-  const placed: Blob[] = [];
+  const placed: PlacedBlob[] = [];
 
   for (const [index, spec] of specs.entries()) {
     let best = { x: randomCoord(), y: randomCoord() };
@@ -110,22 +130,25 @@ function scatter(specs: BlobSpec[], aspect: number, colors: Rgb[]): Blob[] {
         best = candidate;
       }
     }
-    placed.push({ ...best, radius: spec.radius, color: colors[index] });
+    placed.push({ ...best, radius: spec.radius, colorSlot: colorSlots[index] });
   }
   return placed;
 }
 
 export interface Scene {
-  palette: Palette;
-  getBlobs: (aspect: number, count: number) => Blob[];
+  getPalette: (theme: ColorTheme) => Palette;
+  getBlobs: (aspect: number, count: number, theme: ColorTheme) => Blob[];
 }
 
 export function buildScene(): Scene {
   // Shared so a blob keeps its colour when the screen rotates
-  const colors = pickColors(LANDSCAPE_BLOBS.length);
-  const landscape = scatter(LANDSCAPE_BLOBS, LANDSCAPE_ASPECT, colors);
-  const portrait = scatter(PORTRAIT_BLOBS, PORTRAIT_ASPECT, colors);
-  const palette: Palette = {
+  const colorSlots = pickColorSlots(LANDSCAPE_BLOBS.length);
+  const landscape = scatter(LANDSCAPE_BLOBS, LANDSCAPE_ASPECT, colorSlots);
+  const portrait = scatter(PORTRAIT_BLOBS, PORTRAIT_ASPECT, colorSlots);
+  const themeColors = Object.fromEntries(
+    COLOR_THEMES.map(({ value }) => [value, readThemeColors(value)]),
+  ) as Record<ColorTheme, Rgb[]>;
+  const basePalette = {
     bgTop: readColorToken('cream'),
     bgBottom: readColorToken('butter'),
     bgAccent: readColorToken('pink'),
@@ -133,7 +156,14 @@ export function buildScene(): Scene {
     transition: readColorToken('butter'),
   };
   return {
-    palette,
-    getBlobs: (aspect, count) => (aspect < 1 ? portrait : landscape).slice(0, count),
+    getPalette: (theme) => ({
+      ...basePalette,
+      transition: MONO_THEMES.includes(theme) ? themeColors[theme][0] : basePalette.transition,
+      metal: METALLIC_THEMES.includes(theme) ? 1 : 0,
+    }),
+    getBlobs: (aspect, count, theme) =>
+      (aspect < 1 ? portrait : landscape)
+        .slice(0, count)
+        .map(({ colorSlot, ...blob }) => ({ ...blob, color: themeColors[theme][colorSlot] })),
   };
 }

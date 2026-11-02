@@ -1,3 +1,4 @@
+@use 'sass:list';
 @use 'reset';
 @use 'variables' as *;
 @use 'mixins' as *;
@@ -11,6 +12,12 @@
   --color-lavender: #{$color-lavender};
   --color-mint: #{$color-mint};
   --color-coral: #{$color-coral};
+
+  @each $name, $colors in $liquid-themes {
+    @for $i from 1 through list.length($colors) {
+      --liquid-#{$name}-#{$i}: #{list.nth($colors, $i)};
+    }
+  }
   --color-cream: #{$color-cream};
 }
 
@@ -206,7 +213,7 @@ body {
       }
     }
 
-    .mode {
+    .options {
       border: 0;
 
       .label {
@@ -255,6 +262,21 @@ body {
 
       .icon {
         font-size: $font-size-icon;
+      }
+
+      .swatch {
+        flex-shrink: 0;
+        width: $size-swatch;
+        height: $size-swatch;
+        border: $border-width solid $color-line;
+        border-radius: $radius-full;
+
+        @each $name, $colors in $liquid-themes {
+          &.is-#{$name} {
+            // Repeat the first colour so the wheel closes without a seam
+            background: conic-gradient(list.append($colors, list.nth($colors, 1), comma)...);
+          }
+        }
       }
     }
   }

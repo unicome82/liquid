@@ -1,12 +1,16 @@
 import { useEffect, useId, useState } from 'react';
 import {
   AMOUNT_RANGE,
+  COLOR_THEMES,
   INTENSITY_RANGE,
   INTERACTION_MODES,
   SIZE_RANGE,
   type LiquidSettings,
 } from '../../shared/settings';
+import OptionGroup from './OptionGroup';
 import RangeField from './RangeField';
+
+const MODE_ICONS = Object.fromEntries(INTERACTION_MODES.map((mode) => [mode.value, mode.icon]));
 
 interface ControlPanelProps {
   settings: LiquidSettings;
@@ -16,7 +20,6 @@ interface ControlPanelProps {
 function ControlPanel({ settings, onChange }: ControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
-  const modeName = useId();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,30 +57,24 @@ function ControlPanel({ settings, onChange }: ControlPanelProps) {
           unit="%"
           onChange={(value) => update('size', value)}
         />
-        <fieldset className="mode">
-          <legend className="label">Mode</legend>
-          <div className="list">
-            {INTERACTION_MODES.map((mode) => (
-              <label
-                key={mode.value}
-                className={`item${settings.mode === mode.value ? ' is-active' : ''}`}
-              >
-                <input
-                  className="radio"
-                  type="radio"
-                  name={modeName}
-                  value={mode.value}
-                  checked={settings.mode === mode.value}
-                  onChange={() => update('mode', mode.value)}
-                />
-                <span className="material-symbols-outlined icon" aria-hidden="true">
-                  {mode.icon}
-                </span>
-                <span className="txt">{mode.label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <OptionGroup
+          label="Mode"
+          value={settings.mode}
+          options={INTERACTION_MODES}
+          renderVisual={(mode) => (
+            <span className="material-symbols-outlined icon" aria-hidden="true">
+              {MODE_ICONS[mode]}
+            </span>
+          )}
+          onChange={(mode) => update('mode', mode)}
+        />
+        <OptionGroup
+          label="Color"
+          value={settings.theme}
+          options={COLOR_THEMES}
+          renderVisual={(theme) => <span className={`swatch is-${theme}`} aria-hidden="true" />}
+          onChange={(theme) => update('theme', theme)}
+        />
       </div>
       <button
         type="button"

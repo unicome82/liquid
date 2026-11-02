@@ -6,6 +6,15 @@ $color-pink: #f79ac9;
 $color-lavender: #c9a2f2;
 $color-mint: #9ee6c7;
 $color-coral: #ff9f8f;
+
+// Liquid colour themes: six colours each, assigned randomly per blob
+$liquid-themes: (
+  "pastel": ($color-sky, $color-mint, $color-lavender, $color-pink, $color-peach, $color-coral),
+  "vivid": (#1e9bff, #00c98d, #8a5cff, #ff3d8b, #ff8a1f, #ff4a3d),
+  "white": (#ffffff, #fbfaf7, #f6f5f1, #fdfcf9, #f2f1ec, #fafafa),
+  "silver": (#d9dde3, #c6ccd4, #e4e7eb, #bcc3cc, #d0d5dc, #cbd0d8),
+  "gold": (#f2c45a, #e6b148, #f6d27a, #dba23e, #eebd53, #f8d688),
+);
 $color-cream: #fdf9ee;
 $color-ink: #2b2b3a;
 
@@ -48,6 +57,7 @@ $outline-width: 2px;
 $scale-hover: 1.06;
 $size-btn: 3rem;
 $size-thumb: 1rem;
+$size-swatch: 1rem;
 $size-track: 0.25rem;
 $width-panel: 17.5rem;
 

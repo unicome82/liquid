@@ -1,4 +1,4 @@
-import { INTENSITY_RANGE, type LiquidSettings } from '../../shared/settings';
+import { INTENSITY_RANGE, type ColorTheme, type LiquidSettings } from '../../shared/settings';
 import { LiquidSimulation } from './physics';
 import { PointerTracker } from './pointer';
 import { AdaptiveQuality } from './quality';
@@ -32,13 +32,13 @@ export function startLiquidLoop(
   let layoutKey = '';
 
   // Size only rescales target radii; the simulation eases blobs to the new size
-  const syncLayout = (aspect: number, amount: number, size: number) => {
-    const key = `${aspect < 1}-${amount}-${size}`;
+  const syncLayout = (aspect: number, amount: number, size: number, theme: ColorTheme) => {
+    const key = `${aspect < 1}-${amount}-${size}-${theme}`;
     if (key === layoutKey) return;
     layoutKey = key;
     const scale = size / PERCENT;
     simulation.setLayout(
-      scene.getBlobs(aspect, amount).map((blob) => ({ ...blob, radius: blob.radius * scale })),
+      scene.getBlobs(aspect, amount, theme).map((blob) => ({ ...blob, radius: blob.radius * scale })),
     );
   };
 
@@ -50,16 +50,16 @@ export function startLiquidLoop(
 
     if (canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
 
-    const { amount, intensity, mode, size } = getSettings();
+    const { amount, intensity, mode, size, theme } = getSettings();
     const dt = Math.min(frameMs / MS_PER_SECOND, MAX_STEP_SECONDS);
     const aspect = canvas.clientWidth / canvas.clientHeight;
     const normalizedIntensity =
       (intensity - INTENSITY_RANGE.min) / (INTENSITY_RANGE.max - INTENSITY_RANGE.min);
 
     renderer.resize(quality.scale);
-    syncLayout(aspect, amount, size);
+    syncLayout(aspect, amount, size, theme);
     simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
-    renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.palette);
+    renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.getPalette(theme));
   };
 
   const start = () => {
