@@ -2,7 +2,7 @@ import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
 import { EXTRA_BLOBS } from './physics';
 
-// Shader arrays are fixed-size, so allocate for the largest amount plus drips and ink
+// Shader arrays are fixed-size, so allocate for the largest amount plus melt drips
 export const BLOB_COUNT = AMOUNT_RANGE.max + EXTRA_BLOBS;
 
 export const VERTEX_SHADER = `
