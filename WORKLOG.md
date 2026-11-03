@@ -116,3 +116,4 @@
 - Pastel/Vivid 윗면 납작하게(Silver/Gold와 맞춤): BEVEL 0.12→0.05, BEVEL_RADIUS_SHARE 0.5→0.25. 스크린샷 ✅ `npm run build` ✅
 - 납작한 윗면 경계 부드럽게: 림 프로파일 sqrt(1-t²)→sqrt(1-t³) (윗면과 만나는 곳 곡률 0), BEVEL 0.05→0.08, 비율 0.25→0.35. 스크린샷 ✅ `npm run build` ✅
 - Silver/Gold 원복 METAL_HEIGHT_CEILING 0.04→0.12. Pastel/Vivid 두께↑·경계 부드럽게 BEVEL 0.08→0.13, 비율 0.35→0.5 (t³ 프로파일 유지). Water 두께↑ WATER_HEIGHT_CEILING 0.05→0.08. 스크린샷 ✅ `npm run build` ✅
+- Silver/Gold 높이 0.08(중간). Pastel/Vivid 더 완만: BEVEL 0.13→0.2, 비율 0.5→0.7. 그림자 → 비치는 그림자: 밝은 테마는 물방울 색이 배경에 투과(SHADOW_TRANSMIT 0.7, 세기 0.45), 크롬은 기존 회색 그림자 유지. Water는 거의 투명한 빛 번짐. 스크린샷 ✅ `npm run build` ✅

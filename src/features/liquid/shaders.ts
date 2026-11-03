@@ -54,9 +54,9 @@ const float TAU = 6.28318;
 const float RIPPLE_OUTLINE = 0.8;
 const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
-const float BEVEL = 0.13;
+const float BEVEL = 0.2;
 // Small beads get a rim this share of their radius, so they keep a flat top instead of a peak
-const float BEVEL_RADIUS_SHARE = 0.5;
+const float BEVEL_RADIUS_SHARE = 0.7;
 // How quickly neighbouring blob colours fade into each other
 const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
@@ -66,6 +66,9 @@ const float TRANSITION_LIFT = 0.65;
 const vec2 SHADOW_OFFSET = vec2(0.002, -0.008);
 const float SHADOW_BLUR = 0.03;
 const float SHADOW_STRENGTH = 0.16;
+// Light passing through coloured liquid: the shadow takes the drop's hue instead of grey
+const float SHADOW_TRANSMIT = 0.7;
+const float SHADOW_TRANSMIT_STRENGTH = 0.45;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 
@@ -94,7 +97,7 @@ const vec2 ENV_SOFTBOX = vec2(-0.18, 0.65);
 const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
 // Caps how tall chrome swells, so it sits flatter like the pastel liquid
-const float METAL_HEIGHT_CEILING = 0.12;
+const float METAL_HEIGHT_CEILING = 0.08;
 const float METAL_WHITE_START = 0.85;
 const float METAL_WHITE_END = 1.2;
 const float METAL_EDGE_LIFT = 0.12;
@@ -280,7 +283,14 @@ vec3 background(vec2 uv, vec2 p, float d) {
 
   float shadowD = sceneSdf(p - SHADOW_OFFSET);
   float shadow = 1.0 - smoothstep(-SHADOW_BLUR * 0.5, SHADOW_BLUR, shadowD);
-  return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
+  // Chrome is opaque, so it keeps the plain dark shadow
+  if (uMetal >= 1.0) return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
+  vec3 liquid;
+  blendBlobs(p - SHADOW_OFFSET, liquid);
+  vec3 transmitted = bg * mix(vec3(1.0), liquid, SHADOW_TRANSMIT);
+  vec3 shade = mix(transmitted, bg * uShadowTint, uMetal);
+  float strength = mix(SHADOW_TRANSMIT_STRENGTH, SHADOW_STRENGTH, uMetal);
+  return mix(bg, shade, shadow * strength);
 }
 
 // Soft ceiling on dome height: rims stay round but tops level out like a puddle.
