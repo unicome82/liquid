@@ -1,4 +1,4 @@
-export type InteractionMode = 'attract' | 'repel' | 'cut' | 'ripple';
+export type InteractionMode = 'move' | 'cut' | 'ripple';
 export type ColorTheme = 'pastel' | 'vivid' | 'water' | 'silver' | 'gold';
 
 export interface LiquidSettings {
@@ -26,13 +26,12 @@ export const DEFAULT_SETTINGS: LiquidSettings = {
   intensity: 50,
   amount: 8,
   size: 100,
-  mode: 'attract',
+  mode: 'move',
   theme: 'pastel',
 };
 
 export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: string }[] = [
-  { value: 'attract', label: 'Attract', icon: 'compress' },
-  { value: 'repel', label: 'Repel', icon: 'expand' },
+  { value: 'move', label: 'Move', icon: 'drag_pan' },
   { value: 'cut', label: 'Cut', icon: 'content_cut' },
   { value: 'ripple', label: 'Ripple', icon: 'waves' },
 ];
