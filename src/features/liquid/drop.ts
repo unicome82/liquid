@@ -33,6 +33,8 @@ interface Drop extends DropBlob {
   targetRadius: number;
   /** Full-grown radius, kept for the swell even if absorbed before growing in */
   size: number;
+  /** Reached the target's edge; the ring starts here, not on absorption */
+  touched: boolean;
   absorbed: boolean;
 }
 
@@ -63,8 +65,8 @@ const MERGE_APPROACH = 0.15;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
-/** Called when a drop sinks into its target, so the body can swell and ripple */
-export type OnAbsorb = (target: Pool, x: number, y: number) => void;
+/** Called when a drop first meets its target's edge, so the body ripples as they join */
+export type OnTouch = (target: Pool, x: number, y: number) => void;
 
 /** Drops laid by touch that slide into the nearest body of liquid and merge. */
 export class DropRain {
@@ -79,7 +81,7 @@ export class DropRain {
     bodies: Pool[],
     scaleX: number,
     scaleY: number,
-    onAbsorb: OnAbsorb,
+    onTouch: OnTouch,
   ) {
     if (isDropping && pointer.active) {
       const travel = Math.hypot(
@@ -103,11 +105,16 @@ export class DropRain {
       const depth = Math.hypot((target.x - drop.x) * scaleX, (target.y - drop.y) * scaleY);
       const gap = Math.max(depth - target.radius - drop.radius, 0);
       drop.merge = MERGE_JOINED + (MERGE_APART - MERGE_JOINED) * Math.min(gap / MERGE_APPROACH, 1);
+      if (!drop.touched && gap <= 0 && depth > 0) {
+        drop.touched = true;
+        // Ring starts where the bead meets the body's rim
+        const toEdge = target.radius / depth;
+        onTouch(target, target.x + (drop.x - target.x) * toEdge, target.y + (drop.y - target.y) * toEdge);
+      }
       if (!drop.absorbed && depth < target.radius * ABSORB_DEPTH) {
         drop.absorbed = true;
         drop.targetRadius = 0;
         target.radius *= 1 + SWELL_GAIN * (drop.size / target.radius) ** 2;
-        onAbsorb(target, drop.x, drop.y);
       }
       const rate = drop.targetRadius > drop.radius ? GROW_RATE : SINK_RATE;
       drop.radius += (drop.targetRadius - drop.radius) * (1 - Math.exp(-rate * dt));
@@ -141,6 +148,7 @@ export class DropRain {
       merge: MERGE_APART,
       color: target.color,
       target,
+      touched: false,
       absorbed: false,
     });
     if (this.drops.length > MAX_DROPS) this.drops.shift();

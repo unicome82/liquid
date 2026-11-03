@@ -53,6 +53,8 @@ const float RIPPLE_OUTLINE = 0.8;
 const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
+// Small beads get a rim this share of their radius, so they keep a flat top instead of a peak
+const float BEVEL_RADIUS_SHARE = 0.5;
 // How quickly neighbouring blob colours fade into each other
 const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
@@ -208,10 +210,10 @@ float sceneSdf(vec2 p) {
 }
 
 // Circular profile so the rim curves down like a droplet edge
-float heightFromSdf(float d) {
-  float inside = clamp(-d / BEVEL, 0.0, 1.0);
+float heightFromSdf(float d, float bevel) {
+  float inside = clamp(-d / bevel, 0.0, 1.0);
   float t = 1.0 - inside;
-  return sqrt(1.0 - t * t) * BEVEL;
+  return sqrt(1.0 - t * t) * bevel;
 }
 
 // Blob radius around p, blended like the colours, for the dome profile below
@@ -308,9 +310,10 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
   vec2 ex = vec2(eps, 0.0);
   vec2 ey = vec2(0.0, eps);
-  float h = heightFromSdf(d) + rippleHeight(p);
-  float hx = heightFromSdf(sceneSdf(p + ex)) + rippleHeight(p + ex);
-  float hy = heightFromSdf(sceneSdf(p + ey)) + rippleHeight(p + ey);
+  float bevel = min(BEVEL, localRadius(p) * BEVEL_RADIUS_SHARE);
+  float h = heightFromSdf(d, bevel) + rippleHeight(p);
+  float hx = heightFromSdf(sceneSdf(p + ex), bevel) + rippleHeight(p + ex);
+  float hy = heightFromSdf(sceneSdf(p + ey), bevel) + rippleHeight(p + ey);
   vec3 n = normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 
   vec3 l = normalize(LIGHT_DIR);

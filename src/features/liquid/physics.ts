@@ -185,7 +185,7 @@ export class LiquidSimulation {
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
     this.groups = findGroups(this.bodies, scaleX, scaleY);
     this.rippleField.update(dt, pointer, mode === 'ripple', intensity, this.bodies, scaleX, scaleY);
-    // A drop landing sends a ring through the body it joined
+    // A drop meeting a body sends a ring through it from the contact point
     this.dropRain.update(dt, pointer, mode === 'drop', intensity, this.bodies, scaleX, scaleY, (target, x, y) =>
       this.rippleField.emit(x, y, target as Body, intensity),
     );
