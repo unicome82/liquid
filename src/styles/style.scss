@@ -193,6 +193,9 @@ html:has(.liquid.is-dark) body {
       flex-direction: column;
       gap: $space-sm;
       padding: $space-sm $space-md $space-md;
+      // Extra room below, matching the footer's bottom offset, so the sheet's last row
+      // doesn't sit on the screen edge / home bar
+      padding-bottom: calc(#{$space-md} + #{$space-md} + env(safe-area-inset-bottom));
       color: $ui-ink;
       opacity: 0;
       visibility: hidden;
@@ -205,6 +208,7 @@ html:has(.liquid.is-dark) body {
 
       @include mq($bp-tablet) {
         padding: $space-md $space-lg $space-lg;
+        padding-bottom: calc(#{$space-lg} + #{$space-lg} + env(safe-area-inset-bottom));
       }
     }
 
