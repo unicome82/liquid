@@ -81,3 +81,6 @@
 - **Deploy**: GitHub Pages workflow (`.github/workflows/deploy.yml`) — builds with `--base=./` on push to main.
 - **Mobile too blurry on a real phone** → touch starts at 1× and floors at 0.7× (≈1 px per CSS px with the 1.5 DPR cap). `npm run build` ✅
 - **Copyright**: bottom-left `COPYRIGHT ⓒ 2026 UNI` (2xs, aligned to the toggle row, under the open sheet). Screenshots desktop Pastel + mobile Silver ✅ `npm run build` ✅
+
+## 2026-11-03 · Stretch → slime finger
+- Thin snapping strand (sag, pinch, loose drops) replaced by a **finger-wide arm**: 14 segments + tip, radius 0.03–0.04 short-side, reach capped at 0.4, thins 20% at full reach, root flares into the body. Segments chase the root→tip line on springs (wobble); release → underdamped recoil back into the blob (overshoot jiggle), no snap. Merge 0.16 (0.12 left bead dimples). Shader extra slots 9 → 15. Screenshots desktop + mobile hold/recoil/rest ✅ no console errors, `npm run build` ✅
