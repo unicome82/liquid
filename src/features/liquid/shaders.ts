@@ -42,11 +42,11 @@ const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
 const float CUT_SMOOTH = 0.1;
 // Ripple ring: a short wave packet this wide, with crests this far apart
-const float RIPPLE_WIDTH = 0.07;
-const float RIPPLE_WAVELENGTH = 0.06;
+const float RIPPLE_WIDTH = 0.15;
+const float RIPPLE_WAVELENGTH = 0.14;
 const float TAU = 6.28318;
 // Edge displacement per unit of wave height
-const float RIPPLE_OUTLINE = 1.2;
+const float RIPPLE_OUTLINE = 0.8;
 const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;

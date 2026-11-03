@@ -35,15 +35,15 @@ interface LiveRipple {
 /** Fixed shader array size; the oldest ring is dropped beyond this */
 export const MAX_RIPPLES = 6;
 /** Seconds until a ring has fully faded */
-const LIFETIME = 2.4;
+const LIFETIME = 3.2;
 /** Ring growth, short-side units/s; low intensity is thick liquid with slower waves */
-const SPEED: Span = { min: 0.35, max: 0.6 };
-const AMPLITUDE: Span = { min: 0.008, max: 0.016 };
+const SPEED: Span = { min: 0.2, max: 0.35 };
+const AMPLITUDE: Span = { min: 0.006, max: 0.011 };
 /** Short-side units/s² a full-strength ring pushes a blob outward as it passes */
-const RING_PUSH = 1.5;
+const RING_PUSH = 0.8;
 // While dragging, a new ring every this much travel or time, whichever comes first
-const SPAWN_SPACING = 0.12;
-const SPAWN_INTERVAL = 0.6;
+const SPAWN_SPACING = 0.2;
+const SPAWN_INTERVAL = 1;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
