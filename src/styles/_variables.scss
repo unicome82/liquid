@@ -1,3 +1,6 @@
+@use "sass:color";
+@use "sass:list";
+
 // Colors — sampled from the reference image
 $color-sky: #7ec8f8;
 $color-butter: #fff3a1;
@@ -7,10 +10,28 @@ $color-lavender: #c9a2f2;
 $color-mint: #9ee6c7;
 $color-coral: #ff9f8f;
 
+// Retro record palette — vivid as-is, pastel derived from it so the two stay in step
+$retro-orange: #f3620f;
+$retro-yellow: #ffc20a;
+$retro-green: #67944b;
+$retro-teal: #078d8c;
+$retro-blue: #084973;
+$retro-red: #da0d1e;
+$retro-colors: ($retro-orange, $retro-yellow, $retro-green, $retro-teal, $retro-blue, $retro-red);
+$pastel-tint: 60%;
+
+@function pastel-list($colors) {
+  $result: ();
+  @each $c in $colors {
+    $result: list.append($result, color.mix(#fff, $c, $pastel-tint), comma);
+  }
+  @return $result;
+}
+
 // Liquid colour themes: six colours each, assigned randomly per blob
 $liquid-themes: (
-  "pastel": ($color-sky, $color-mint, $color-lavender, $color-pink, $color-peach, $color-coral),
-  "vivid": (#0077ff, #00d96f, #7a2cff, #ff1477, #ff7a00, #ff2a2a),
+  "pastel": pastel-list($retro-colors),
+  "vivid": $retro-colors,
   // Water colours tint what is seen through the drop
   "water": (#eef8ff, #e6f4fd, #f2faff, #e0f1fb, #ebf7ff, #f5fbff),
   "silver": (#e6e8ec, #dcdfe4, #eceef1, #d6dae0, #e2e5e9, #dfe2e7),

@@ -108,3 +108,4 @@
 - Shadow tightened so blobs sit on the surface: offset (0.025,-0.045)→(0.008,-0.014), blur 0.14→0.05, strength 0.2→0.26. Screenshots desktop + mobile ✅ `npm run build` ✅
 - Vivid theme more saturated: #1e9bff,#00c98d,#8a5cff,#ff3d8b,#ff8a1f,#ff4a3d → #0077ff,#00d96f,#7a2cff,#ff1477,#ff7a00,#ff2a2a. Screenshots desktop + mobile ✅ `npm run build` ✅
 - Mobile zoom off: viewport maximum-scale=1, user-scalable=no + html/body touch-action: manipulation (iOS ignores user-scalable). Preview LIQUID updated. `npm run build` ✅
+- 레트로 팔레트: Vivid = #f3620f #ffc20a #67944b #078d8c #084973 #da0d1e, Pastel = 같은 색을 흰색 60% 섞어 생성(`pastel-list`). 스크린샷 데스크톱 + 모바일 ✅ `npm run build` ✅
