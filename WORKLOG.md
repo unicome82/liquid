@@ -121,3 +121,4 @@
 - 그림자 전부 삭제(셰이더 background·uShadowTint·$color-shadow 제거). 어두운 면 좁고 진하게: SHADE_MIN 0.82→0.9, 가장자리 깊이 0.45→0.75를 1-n.z 0.3~0.85 구간에만. 스크린샷 ✅ `npm run build` ✅
 - 성능 테스트(헤드리스, 720×450·390×844, 최적화 전 빌드 대비): 테마 4종·모드 3종·모바일 모두 2.0~2.7배 fps, p95 프레임 약 절반. 콘솔 에러 없음.
 - iOS Safari 상태바·주소창 아래 잘림: 캔버스를 fixed + 100lvh로(툴바 뒤까지 그림), UI는 100dvh 유지. Chromium 모바일 스크린샷 ✅ (실기기 미확인) `npm run build` ✅
+- 아이폰 실기기: fixed 레이어가 툴바에서 끊기고 Safari가 단색 띠를 칠함 → .liquid·캔버스를 absolute로(툴바 아래로 이어짐), 어두운 테마는 html 배경을 night로 맞춰 상태바 색 일치. 스크롤 없음 확인 ✅ `npm run build` ✅ (실기기 미확인)

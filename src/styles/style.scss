@@ -59,9 +59,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+// Safari tints its status bar and toolbar from the page colour, so match the dark stage
+html:has(.liquid.is-dark),
+html:has(.liquid.is-dark) body {
+  background: $color-night;
+}
+
 .liquid {
   @include full-screen;
-  overflow: hidden;
+  // iOS 26 Safari stops fixed layers at its toolbars and paints a solid bar there;
+  // absolute content runs on underneath them. Not clipped, so the canvas can reach past 100dvh
+  position: absolute;
   color: $ui-ink;
 
   // Dark backgrounds (metal themes) flip the UI to light-on-dark
@@ -74,9 +82,9 @@ body {
 
   .canvas,
   .fallback {
-    // Fixed + large viewport height so the liquid runs on under iOS Safari's status bar
-    // and toolbars instead of stopping at their edge; the UI stays inside 100dvh
-    position: fixed;
+    // Large viewport height so the liquid runs on under iOS Safari's toolbars instead of
+    // stopping at their edge; the UI stays inside 100dvh
+    position: absolute;
     top: 0;
     left: 0;
     z-index: $z-canvas;
