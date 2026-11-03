@@ -90,3 +90,4 @@
 - **Colour fix**: transition lift used `1 - maxW/total`, so overlapping parts of one colour (blob + its own strand) were tinted with the fixed transition colour. Now Gini impurity over hues (pairwise, skipped when one blob dominates) → same colour stays itself, different hues blend as before.
 - Dent ridges caught the specular as stripes → dent trail segments smooth-unioned (0.03), depth 0.02. Stretch's 15 extra blob slots removed (BLOB_COUNT 27 → 12).
 - Screenshots desktop Pastel press/pull/cut + mobile Water press/pull ✅ no console errors, `npm run build` ✅
+- Pulled arm looked pointed along its middle and too thin → width 0.06–0.11 (root ×1.4), axis distance rounded (`PULL_ROUND` 0.04) and arm included in the dome radius → round crown. Dent wider (0.045–0.08) and smoother (0.06) so fast strokes leave no sparkly creases. Screenshots desktop press/pull + mobile pull ✅ `npm run build` ✅

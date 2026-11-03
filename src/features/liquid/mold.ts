@@ -27,13 +27,13 @@ interface Point {
 }
 
 /** Fingertip dents ooze back over a few seconds, like soft dough */
-const DENT_TRAIL: TrailOptions = { lifetime: 3, width: { min: 0.025, max: 0.06 } };
+const DENT_TRAIL: TrailOptions = { lifetime: 3, width: { min: 0.045, max: 0.08 } };
 /** Fingertip-wide arm: fast drags draw it thin, slow ones thick */
-const PULL_WIDTH: Span = { min: 0.025, max: 0.05 };
+const PULL_WIDTH: Span = { min: 0.06, max: 0.11 };
 /** 1/s — width eases toward the drag speed so a jittery stroke doesn't ripple */
 const WIDTH_RATE = 6;
 /** Root sits wider than the tip so the arm flares into the body */
-const ROOT_SCALE = 1.6;
+const ROOT_SCALE = 1.4;
 // Root starts inside the source so the arm grows out of the surface, not beside it
 const ROOT_DEPTH = 0.6;
 /** Furthest the arm reaches out of the blob's surface, short-side units */

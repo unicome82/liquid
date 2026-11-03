@@ -44,11 +44,12 @@ const float MERGE_K = 0.28;
 const float CUT_SMOOTH = 0.1;
 // Fillet where pulled dough meets its blob; tighter than MERGE_K so it reads as an arm
 const float PULL_MERGE = 0.12;
+const float PULL_ROUND = 0.04;
 // Fingertip dent: full depth this far inside the press, fading out just past its edge
 const float DENT_DEPTH = 0.02;
 const float DENT_BOWL = 0.06;
 const float DENT_RIM = 0.02;
-const float DENT_SMOOTH = 0.03;
+const float DENT_SMOOTH = 0.06;
 // Colours closer than this count as one hue, so a blob and its own dough don't read as a seam
 const float COLOR_MATCH = 0.02;
 const float SOLE_HUE = 0.999;
@@ -170,8 +171,14 @@ float trailSdf(vec2 p, vec3 points[CUT_POINTS], int count, float smoothing) {
   return d;
 }
 
+// Like taperedSegmentSdf, but the distance is rounded off along the axis: a sharp axis
+// shows up as a pointed ridge in the shading, worst on an arm thinner than BEVEL
 float pullSdf(vec2 p) {
-  return taperedSegmentSdf(p, uPullRoot, uPullTip);
+  vec2 pa = p - uPullRoot.xy;
+  vec2 ba = uPullTip.xy - uPullRoot.xy;
+  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+  vec2 q = pa - ba * h;
+  return sqrt(dot(q, q) + PULL_ROUND * PULL_ROUND) - mix(uPullRoot.z, uPullTip.z, h);
 }
 
 float sceneSdf(vec2 p) {
@@ -206,6 +213,12 @@ float localRadius(vec2 p) {
   for (int i = 0; i < BLOB_COUNT; i++) {
     float w = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
     sum += uBlobs[i].z * w;
+    total += w;
+  }
+  // The arm domes over its own width, not its blob's, so its crown stays round
+  if (uPullTip.z > 0.0) {
+    float w = exp(-pullSdf(p) * COLOR_SHARPNESS);
+    sum += mix(uPullRoot.z, uPullTip.z, 0.5) * w;
     total += w;
   }
   return sum / max(total, 1e-6);
