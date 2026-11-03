@@ -45,6 +45,9 @@ const float CUT_SMOOTH = 0.1;
 const float RIPPLE_WIDTH = 0.07;
 const float RIPPLE_WAVELENGTH = 0.06;
 const float TAU = 6.28318;
+// Edge displacement per unit of wave height
+const float RIPPLE_OUTLINE = 1.2;
+const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
 // How quickly neighbouring blob colours fade into each other
@@ -158,12 +161,27 @@ float cutSdf(vec2 p) {
   return d;
 }
 
+// Surface waves from touches, as a height; sceneSdf also bulges the outline with it
+float rippleHeight(vec2 p) {
+  float h = 0.0;
+  for (int i = 0; i < MAX_RIPPLES; i++) {
+    if (i >= uRippleCount) break;
+    float offset = length(p - uRipples[i].xy) - uRipples[i].z;
+    float envelope = exp(-(offset * offset) / (RIPPLE_WIDTH * RIPPLE_WIDTH));
+    h += uRipples[i].w * envelope * cos(offset * TAU / RIPPLE_WAVELENGTH);
+  }
+  return h;
+}
+
 float sceneSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
     float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
     d = smin(d, blobSdf(p, uBlobs[i]), k);
   }
+  // A passing ring swells and dents the edge too, so the drop moves with the wave
+  // Fades out away from the edge, or a crest in open space would raise a stray speck
+  if (uRippleCount > 0) d -= rippleHeight(p) * RIPPLE_OUTLINE * smoothstep(RIPPLE_EDGE_REACH, 0.0, d);
   // No groove: skip the carve entirely, it runs for every normal/shadow sample
   if (uCutCount < 2) return d;
   return smax(d, -cutSdf(p), CUT_SMOOTH);
@@ -234,18 +252,6 @@ vec3 background(vec2 uv, vec2 p, float d) {
 // 0 disables it (full hemisphere)
 float flatten(float h, float ceiling) {
   return ceiling > 0.0 ? h / (1.0 + h / ceiling) : h;
-}
-
-// Surface waves from touches; only shading reads them, so the outline never wobbles
-float rippleHeight(vec2 p) {
-  float h = 0.0;
-  for (int i = 0; i < MAX_RIPPLES; i++) {
-    if (i >= uRippleCount) break;
-    float offset = length(p - uRipples[i].xy) - uRipples[i].z;
-    float envelope = exp(-(offset * offset) / (RIPPLE_WIDTH * RIPPLE_WIDTH));
-    h += uRipples[i].w * envelope * cos(offset * TAU / RIPPLE_WAVELENGTH);
-  }
-  return h;
 }
 
 vec3 domeNormal(vec2 p, float eps, float ceiling, float rippleGain) {

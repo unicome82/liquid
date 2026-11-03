@@ -15,6 +15,15 @@ interface Span {
   max: number;
 }
 
+/** What a ring needs to shove a blob as it rolls past */
+export interface Floater {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+}
+
 interface LiveRipple {
   x: number;
   y: number;
@@ -30,6 +39,8 @@ const LIFETIME = 2.4;
 /** Ring growth, short-side units/s; low intensity is thick liquid with slower waves */
 const SPEED: Span = { min: 0.35, max: 0.6 };
 const AMPLITUDE: Span = { min: 0.008, max: 0.016 };
+/** Short-side units/s² a full-strength ring pushes a blob outward as it passes */
+const RING_PUSH = 1.5;
 // While dragging, a new ring every this much travel or time, whichever comes first
 const SPAWN_SPACING = 0.12;
 const SPAWN_INTERVAL = 0.6;
@@ -73,6 +84,20 @@ export class RippleField {
       radius: age * speed,
       amplitude: amplitude * (1 - age / LIFETIME) ** 2,
     }));
+  }
+
+  /** Rolls the blob outward while a ring's crest sweeps across it, so it bobs on the wave. */
+  push(body: Floater, scaleX: number, scaleY: number, dt: number) {
+    for (const ripple of this.getRipples()) {
+      const dx = (body.x - ripple.x) * scaleX;
+      const dy = (body.y - ripple.y) * scaleY;
+      const distance = Math.hypot(dx, dy);
+      if (distance === 0) continue;
+      const offset = (distance - ripple.radius) / body.radius;
+      const strength = RING_PUSH * (ripple.amplitude / AMPLITUDE.max) * Math.exp(-offset * offset);
+      body.vx += ((dx / distance) * strength * dt) / scaleX;
+      body.vy += ((dy / distance) * strength * dt) / scaleY;
+    }
   }
 
   private spawn(pointer: PointerInput, intensity: number) {

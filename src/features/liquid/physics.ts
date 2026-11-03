@@ -140,6 +140,7 @@ export class LiquidSimulation {
       const targetY = body.homeY + ampY * wave(t * DRIFT_Y_FREQ, body.phase + GOLDEN_ANGLE);
 
       if (pointer.active) applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
+      this.rippleField.push(body, scaleX, scaleY, dt);
       body.vx += ((targetX - body.x) * stiffness - body.vx * damping) * dt;
       body.vy += ((targetY - body.y) * stiffness - body.vy * damping) * dt;
       body.x += body.vx * dt;
