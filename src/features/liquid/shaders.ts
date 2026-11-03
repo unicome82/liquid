@@ -66,19 +66,26 @@ const float TRANSITION_LIFT = 0.65;
 const vec2 SHADOW_OFFSET = vec2(0.002, -0.008);
 const float SHADOW_BLUR = 0.03;
 const float SHADOW_STRENGTH = 0.16;
-// Light passing through coloured liquid: the shadow takes the drop's hue instead of grey
-const float SHADOW_TRANSMIT = 0.7;
-const float SHADOW_TRANSMIT_STRENGTH = 0.45;
+// Glossy floor (marble / glass): a thin dark contact line where the drop touches,
+// plus a soft mirror image of the drop's colour spilling just below it
+const float CONTACT_WIDTH = 0.006;
+const float CONTACT_STRENGTH = 0.22;
+const vec2 REFLECT_OFFSET = vec2(0.0, -0.022);
+const float REFLECT_BLUR = 0.045;
+const float REFLECT_STRENGTH = 0.28;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 
 const vec3 LIGHT_DIR = vec3(-0.18, 0.75, 0.64);
-const float SHADE_MIN = 0.9;
-const float SPECULAR_POWER = 90.0;
-const float SPECULAR_STRENGTH = 0.4;
+const float SHADE_MIN = 0.82;
+// Glossy like poured polish: a small, crisp highlight rather than a broad sheen
+const float SPECULAR_POWER = 320.0;
+const float SPECULAR_STRENGTH = 0.95;
 const float SHEEN_POWER = 6.0;
-const float SHEEN_STRENGTH = 0.12;
-const float RIM_STRENGTH = 0.45;
+const float SHEEN_STRENGTH = 0.05;
+// Liquid is thicker toward the rim, so the colour there reads deeper and richer
+const float BODY_EDGE_DEPTH = 0.45;
+const float RIM_STRENGTH = 0.15;
 const float NORMAL_SAMPLE_PX = 2.0;
 
 // Chrome reflects a fake studio: bright sky, dark horizon band, dim floor, one softbox
@@ -277,20 +284,23 @@ vec3 backdrop(vec2 uv) {
 vec3 background(vec2 uv, vec2 p, float d) {
   vec3 bg = backdrop(uv);
 
-  // Beyond this distance the offset shadow is fully transparent, so skip its SDF pass
-  float shadowReach = SHADOW_BLUR + length(SHADOW_OFFSET);
-  if (d > shadowReach) return bg;
+  // Beyond this distance shadow and reflection are fully transparent, so skip their SDF pass
+  float reach = max(SHADOW_BLUR + length(SHADOW_OFFSET), REFLECT_BLUR + length(REFLECT_OFFSET));
+  if (d > reach) return bg;
 
-  float shadowD = sceneSdf(p - SHADOW_OFFSET);
-  float shadow = 1.0 - smoothstep(-SHADOW_BLUR * 0.5, SHADOW_BLUR, shadowD);
-  // Chrome is opaque, so it keeps the plain dark shadow
-  if (uMetal >= 1.0) return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
+  // Chrome stays on its dark stage with the plain drop shadow
+  if (uMetal >= 1.0) {
+    float shadowD = sceneSdf(p - SHADOW_OFFSET);
+    float shadow = 1.0 - smoothstep(-SHADOW_BLUR * 0.5, SHADOW_BLUR, shadowD);
+    return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
+  }
+  float reflectD = sceneSdf(p - REFLECT_OFFSET);
+  float reflection = 1.0 - smoothstep(-REFLECT_BLUR * 0.5, REFLECT_BLUR, reflectD);
   vec3 liquid;
-  blendBlobs(p - SHADOW_OFFSET, liquid);
-  vec3 transmitted = bg * mix(vec3(1.0), liquid, SHADOW_TRANSMIT);
-  vec3 shade = mix(transmitted, bg * uShadowTint, uMetal);
-  float strength = mix(SHADOW_TRANSMIT_STRENGTH, SHADOW_STRENGTH, uMetal);
-  return mix(bg, shade, shadow * strength);
+  blendBlobs(p - REFLECT_OFFSET, liquid);
+  vec3 floorCol = mix(bg, liquid, reflection * REFLECT_STRENGTH);
+  float contact = 1.0 - smoothstep(0.0, CONTACT_WIDTH, d);
+  return mix(floorCol, floorCol * uShadowTint, contact * CONTACT_STRENGTH);
 }
 
 // Soft ceiling on dome height: rims stay round but tops level out like a puddle.
@@ -352,6 +362,7 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
+  col = mix(col, base * base, smoothstep(0.05, 0.7, 1.0 - n.z) * BODY_EDGE_DEPTH);
   col += pow(nh, SPECULAR_POWER) * SPECULAR_STRENGTH;
 
   // Only pay for the dome normal when a material actually uses it
