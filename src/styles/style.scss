@@ -202,7 +202,8 @@ body {
     // Rows reflow into columns on wide screens so the full-width sheet stays short
     .fields {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(#{$width-field-column}, 1fr));
+      // min() lets one column shrink below the column width on narrow phones instead of overflowing
+      grid-template-columns: repeat(auto-fit, minmax(min(#{$width-field-column}, 100%), 1fr));
       gap: $space-sm $space-lg;
     }
 
@@ -240,13 +241,14 @@ body {
     .field,
     .options {
       display: grid;
-      grid-template-columns: $width-field-label 1fr;
+      // minmax(0, …) so the control column can shrink below its content's width
+      grid-template-columns: $width-field-label minmax(0, 1fr);
       align-items: center;
       gap: $space-sm;
     }
 
     .field {
-      grid-template-columns: $width-field-label 1fr $width-field-value;
+      grid-template-columns: $width-field-label minmax(0, 1fr) $width-field-value;
 
       .value {
         text-align: right;
@@ -302,6 +304,7 @@ body {
         display: flex;
         flex: 1;
         flex-direction: column;
+        min-width: 0;
         align-items: center;
         gap: $space-2xs;
         padding: $space-xs $space-2xs;
@@ -335,7 +338,9 @@ body {
 
       // Colour choices are swatch-only round buttons
       &.is-swatch {
+        // Fixed-size swatches wrap onto a second row on the narrowest phones
         .list {
+          flex-wrap: wrap;
           gap: $space-xs;
         }
 
