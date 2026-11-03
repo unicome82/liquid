@@ -54,9 +54,9 @@ const float TAU = 6.28318;
 const float RIPPLE_OUTLINE = 0.8;
 const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
-const float BEVEL = 0.12;
+const float BEVEL = 0.05;
 // Small beads get a rim this share of their radius, so they keep a flat top instead of a peak
-const float BEVEL_RADIUS_SHARE = 0.5;
+const float BEVEL_RADIUS_SHARE = 0.25;
 // How quickly neighbouring blob colours fade into each other
 const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
