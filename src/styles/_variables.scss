@@ -38,9 +38,12 @@ $liquid-themes: (
   "gold": (#f5c75a, #edbb4c, #f8d273, #e8b244, #f2c255, #f9d57e),
 );
 $color-cream: #fdf9ee;
+// Mid-century off-white page and a warm neutral grey shadow (lavender read as a red cast)
+$color-offwhite: #f2ece0;
+$color-shadow: #8f877c;
 $color-ink: #2b2b3a;
 
-$color-bg: $color-cream;
+$color-bg: $color-offwhite;
 $color-text: $color-ink;
 $color-line-dark: rgba($color-cream, 0.2);
 $color-night: #0b0b0d;

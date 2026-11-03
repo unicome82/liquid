@@ -8,6 +8,8 @@ type ColorToken =
   | 'pink'
   | 'lavender'
   | 'cream'
+  | 'offwhite'
+  | 'shadow'
   | 'night'
   | 'night-soft'
   | 'ink';
@@ -172,10 +174,11 @@ export function buildScene(): Scene {
     COLOR_THEMES.map(({ value }) => [value, readThemeColors(value)]),
   ) as Record<ColorTheme, Rgb[]>;
   const basePalette = {
-    bgTop: readColorToken('cream'),
-    bgBottom: readColorToken('butter'),
-    bgAccent: readColorToken('pink'),
-    shadowTint: readColorToken('lavender'),
+    // One flat colour: top, bottom and accent match so the backdrop has no gradient
+    bgTop: readColorToken('offwhite'),
+    bgBottom: readColorToken('offwhite'),
+    bgAccent: readColorToken('offwhite'),
+    shadowTint: readColorToken('shadow'),
     transition: readColorToken('butter'),
     text: readColorToken('ink'),
   };

@@ -43,9 +43,9 @@ export interface LiquidRenderer {
   dispose: () => void;
 }
 
-// Caps fill-rate cost; touch devices get a lower cap since their GPUs are weaker
+// Caps fill-rate cost. Phones keep 2 too: at 1.5 the drop edges and copy looked soft
 const MAX_DPR_DESKTOP = 2;
-const MAX_DPR_TOUCH = 1.5;
+const MAX_DPR_TOUCH = 2;
 // Parks unused blob slots far off-screen so they never contribute
 const OFFSCREEN = 1e4;
 const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
@@ -113,6 +113,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
     cutCount: gl.getUniformLocation(program, 'uCutCount'),
+    blobCount: gl.getUniformLocation(program, 'uBlobCount'),
     ripples: gl.getUniformLocation(program, 'uRipples'),
     rippleCount: gl.getUniformLocation(program, 'uRippleCount'),
     blobGroups: gl.getUniformLocation(program, 'uBlobGroups'),
@@ -234,6 +235,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
     gl!.uniform1i(uniforms.cutCount, Math.min(cuts.length, CUT_POINTS));
+    gl!.uniform1i(uniforms.blobCount, Math.min(blobs.length, BLOB_COUNT));
     gl!.uniform4fv(uniforms.ripples, rippleData);
     gl!.uniform1i(uniforms.rippleCount, Math.min(ripples.length, MAX_RIPPLES));
     gl!.uniform1fv(uniforms.blobGroups, blobGroupData);

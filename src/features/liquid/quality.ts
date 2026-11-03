@@ -6,9 +6,9 @@ const SMOOTHING = 0.1;
 const SCALE_STEP = 0.1;
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 1;
-// Touch DPR is already capped at 1.5, so 0.7× keeps about one pixel per CSS pixel;
+// Touch DPR is capped at 2, so 0.75× still keeps 1.5 pixels per CSS pixel;
 // lower than that reads as visibly blurry on phones
-const MIN_SCALE_TOUCH = 0.7;
+const MIN_SCALE_TOUCH = 0.75;
 // Wait for the average to settle after each change so the scale doesn't oscillate
 const DEGRADE_COOLDOWN_FRAMES = 60;
 const RECOVER_COOLDOWN_FRAMES = 180;

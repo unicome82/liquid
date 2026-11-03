@@ -22,6 +22,7 @@ precision highp float;
 
 uniform vec2 uResolution;
 uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: merge range (0 = default)
+uniform int uBlobCount;            // live blobs; loops stop here instead of walking empty slots
 uniform vec3 uColors[BLOB_COUNT];
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform int uCutCount;             // live points; the rest of uCuts is unused
@@ -61,13 +62,14 @@ const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
 const float TRANSITION_LIFT = 0.65;
 
-const vec2 SHADOW_OFFSET = vec2(0.008, -0.014);
-const float SHADOW_BLUR = 0.05;
-const float SHADOW_STRENGTH = 0.26;
+// Light from almost straight above, so the contact shadow sits just under the drop
+const vec2 SHADOW_OFFSET = vec2(0.002, -0.008);
+const float SHADOW_BLUR = 0.03;
+const float SHADOW_STRENGTH = 0.3;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 
-const vec3 LIGHT_DIR = vec3(-0.45, 0.6, 0.66);
+const vec3 LIGHT_DIR = vec3(-0.18, 0.75, 0.64);
 const float SHADE_MIN = 0.9;
 const float SPECULAR_POWER = 90.0;
 const float SPECULAR_STRENGTH = 0.4;
@@ -87,7 +89,8 @@ const vec3 ENV_BAND_2 = vec3(0.32, 0.045, 0.65);
 const vec3 ENV_BAND_3 = vec3(-0.58, 0.05, 0.6);
 const vec3 ENV_BAND_4 = vec3(0.62, 0.035, 0.5);
 const vec3 ENV_BAND_5 = vec3(-0.82, 0.04, 0.45);
-const vec2 ENV_SOFTBOX = vec2(-0.45, 0.55);
+// Matches LIGHT_DIR so chrome's highlight sits where the pastel one does
+const vec2 ENV_SOFTBOX = vec2(-0.18, 0.65);
 const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
 // Caps how tall chrome swells, so it sits flatter like the pastel liquid
@@ -183,6 +186,7 @@ float nearestGroup(vec2 p) {
   float best = 1e5;
   float group = -1.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
+    if (i >= uBlobCount) break;
     float d = blobSdf(p, uBlobs[i], uStretch[i]);
     if (d < best) {
       best = d;
@@ -193,6 +197,8 @@ float nearestGroup(vec2 p) {
 }
 
 float rippleHeight(vec2 p) {
+  // Spares the nearest-group pass, which walks every blob
+  if (uRippleCount == 0) return 0.0;
   float h = 0.0;
   float group = nearestGroup(p);
   for (int i = 0; i < MAX_RIPPLES; i++) {
@@ -209,6 +215,7 @@ float rippleHeight(vec2 p) {
 float sceneSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
+    if (i >= uBlobCount) break;
     float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
     d = smin(d, blobSdf(p, uBlobs[i], uStretch[i]), k);
   }
@@ -227,39 +234,33 @@ float heightFromSdf(float d, float bevel) {
   return sqrt(1.0 - t * t) * bevel;
 }
 
-// Blob radius around p, blended like the colours, for the dome profile below
-float localRadius(vec2 p) {
-  float sum = 0.0;
-  float total = 0.0;
-  for (int i = 0; i < BLOB_COUNT; i++) {
-    float w = exp(-blobSdf(p, uBlobs[i], uStretch[i]) * COLOR_SHARPNESS);
-    sum += uBlobs[i].z * w;
-    total += w;
-  }
-  return sum / max(total, 1e-6);
-}
-
 // Full rounded body for chrome and water: for a lone circle this is an exact hemisphere
 // (sqrt(r² - |q|²) rewritten in terms of the SDF), and it stays smooth across necks.
 // A plain deep bevel instead peaks in a cone at each centre.
-float domeHeight(vec2 p) {
-  float r = localRadius(p);
-  float d = max(sceneSdf(p), -r);
+float domeHeight(float d, float r) {
+  d = max(d, -r);
   return sqrt(max(-d * (2.0 * r + d), 0.0));
 }
 
-vec3 liquidColor(vec2 p) {
-  vec3 sum = vec3(0.0);
+// Colour and radius share the same per-blob weights, so one pass yields both
+// Returns the blended blob radius around p (for the dome profile); colour goes to color
+float blendBlobs(vec2 p, out vec3 color) {
+  vec3 colorSum = vec3(0.0);
+  float radiusSum = 0.0;
   float total = 0.0;
   float maxW = 0.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
+    if (i >= uBlobCount) break;
     float w = exp(-blobSdf(p, uBlobs[i], uStretch[i]) * COLOR_SHARPNESS);
-    sum += uColors[i] * w;
+    colorSum += uColors[i] * w;
+    radiusSum += uBlobs[i].z * w;
     total += w;
     maxW = max(maxW, w);
   }
+  total = max(total, 1e-6);
   float mixAmount = 1.0 - maxW / total;
-  return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
+  color = mix(colorSum / total, uTransition, mixAmount * TRANSITION_LIFT);
+  return radiusSum / total;
 }
 
 vec3 backdrop(vec2 uv) {
@@ -287,12 +288,12 @@ float flatten(float h, float ceiling) {
   return ceiling > 0.0 ? h / (1.0 + h / ceiling) : h;
 }
 
-vec3 domeNormal(vec2 p, float eps, float ceiling, float rippleGain) {
-  vec2 ex = vec2(eps, 0.0);
-  vec2 ey = vec2(0.0, eps);
-  float h = flatten(domeHeight(p), ceiling) + rippleHeight(p) * rippleGain;
-  float hx = flatten(domeHeight(p + ex), ceiling) + rippleHeight(p + ex) * rippleGain;
-  float hy = flatten(domeHeight(p + ey), ceiling) + rippleHeight(p + ey) * rippleGain;
+// Reuses the SDF and ripple samples shadeLiquid already took at p, p+x and p+y
+// (one radius for all three: it barely changes over a couple of pixels)
+vec3 domeNormal(vec3 dist, vec3 ripple, float r, float eps, float ceiling, float rippleGain) {
+  float h = flatten(domeHeight(dist.x, r), ceiling) + ripple.x * rippleGain;
+  float hx = flatten(domeHeight(dist.y, r), ceiling) + ripple.y * rippleGain;
+  float hy = flatten(domeHeight(dist.z, r), ceiling) + ripple.z * rippleGain;
   return normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 }
 
@@ -321,10 +322,14 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
   vec2 ex = vec2(eps, 0.0);
   vec2 ey = vec2(0.0, eps);
-  float bevel = min(BEVEL, localRadius(p) * BEVEL_RADIUS_SHARE);
-  float h = heightFromSdf(d, bevel) + rippleHeight(p);
-  float hx = heightFromSdf(sceneSdf(p + ex), bevel) + rippleHeight(p + ex);
-  float hy = heightFromSdf(sceneSdf(p + ey), bevel) + rippleHeight(p + ey);
+  vec3 dist = vec3(d, sceneSdf(p + ex), sceneSdf(p + ey));
+  vec3 ripple = vec3(rippleHeight(p), rippleHeight(p + ex), rippleHeight(p + ey));
+  vec3 base;
+  float radius = blendBlobs(p, base);
+  float bevel = min(BEVEL, radius * BEVEL_RADIUS_SHARE);
+  float h = heightFromSdf(dist.x, bevel) + ripple.x;
+  float hx = heightFromSdf(dist.y, bevel) + ripple.y;
+  float hy = heightFromSdf(dist.z, bevel) + ripple.z;
   vec3 n = normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 
   vec3 l = normalize(LIGHT_DIR);
@@ -333,7 +338,6 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float nh = max(dot(n, halfVec), 0.0);
   float fresnel = pow(1.0 - n.z, 3.0);
 
-  vec3 base = liquidColor(p);
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
@@ -341,8 +345,8 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
 
   // Only pay for the dome normal when a material actually uses it
   if (uMetal + uWater <= 0.0) return col;
-  if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING, 1.0)), uMetal);
-  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, WATER_HEIGHT_CEILING, WATER_RIPPLE_GAIN), l, halfVec), uWater);
+  if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(dist, ripple, radius, eps, METAL_HEIGHT_CEILING, 1.0)), uMetal);
+  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(dist, ripple, radius, eps, WATER_HEIGHT_CEILING, WATER_RIPPLE_GAIN), l, halfVec), uWater);
   return col;
 }
 
@@ -353,6 +357,11 @@ void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) * px;
 
   float d = sceneSdf(p);
+  // Fully inside the liquid: the backdrop and its shadow would be painted over anyway
+  if (d <= -px) {
+    gl_FragColor = vec4(shadeLiquid(uv, p, d, px), 1.0);
+    return;
+  }
   vec3 bg = background(uv, p, d);
   float coverage = 1.0 - smoothstep(-px, px, d);
 
