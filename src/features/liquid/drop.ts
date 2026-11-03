@@ -41,11 +41,12 @@ export const MAX_DROPS = 4;
 /** Short-side units; low intensity lays bigger, heavier drops */
 const DROP_RADIUS: Span = { min: 0.06, max: 0.04 };
 /** 1/s² — pull toward the target; high intensity is runnier and quicker */
-const PULL_STIFFNESS: Span = { min: 4, max: 9 };
-const PULL_DAMPING_RATIO = 0.7;
+const PULL_STIFFNESS: Span = { min: 0.8, max: 1.6 };
+// Critically damped so it creeps in without overshooting into the body
+const PULL_DAMPING_RATIO = 1;
 /** 1/s — how fast a drop swells in after the tap, and sinks away once absorbed */
-const GROW_RATE = 8;
-const SINK_RATE = 5;
+const GROW_RATE = 3;
+const SINK_RATE = 2;
 /** Absorbed once its centre is this far inside the target, as a share of the target radius */
 const ABSORB_DEPTH = 0.7;
 /** The target swells by the drop's share of volume, scaled so the bump reads */
@@ -55,10 +56,10 @@ const SPAWN_SPACING = 0.12;
 const RADIUS_EPSILON = 1e-3;
 // The liquid's wide merge range would bridge a fresh drop to every neighbour at once;
 // keep it a separate bead until it nears its target, then blend into the shader default
-const MERGE_APART = 0.06;
+const MERGE_APART = 0.12;
 const MERGE_JOINED = 0.28;
 /** Edge gap over which the merge range opens up, short-side units */
-const MERGE_APPROACH = 0.06;
+const MERGE_APPROACH = 0.15;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
