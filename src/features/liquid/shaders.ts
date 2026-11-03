@@ -45,9 +45,9 @@ const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
 const float TRANSITION_LIFT = 0.65;
 
-const vec2 SHADOW_OFFSET = vec2(0.025, -0.045);
-const float SHADOW_BLUR = 0.14;
-const float SHADOW_STRENGTH = 0.2;
+const vec2 SHADOW_OFFSET = vec2(0.008, -0.014);
+const float SHADOW_BLUR = 0.05;
+const float SHADOW_STRENGTH = 0.26;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 

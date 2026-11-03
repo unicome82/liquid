@@ -81,3 +81,4 @@
 - **Deploy**: GitHub Pages workflow (`.github/workflows/deploy.yml`) — builds with `--base=./` on push to main.
 - **Mobile too blurry on a real phone** → touch starts at 1× and floors at 0.7× (≈1 px per CSS px with the 1.5 DPR cap). `npm run build` ✅
 - **Copyright**: bottom-left `COPYRIGHT ⓒ 2026 UNI` (2xs, aligned to the toggle row, under the open sheet). Screenshots desktop Pastel + mobile Silver ✅ `npm run build` ✅
+- Shadow tightened so blobs sit on the surface: offset (0.025,-0.045)→(0.008,-0.014), blur 0.14→0.05, strength 0.2→0.26. Screenshots desktop + mobile ✅ `npm run build` ✅
