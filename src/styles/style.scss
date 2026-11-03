@@ -89,8 +89,8 @@ html:has(.liquid.is-dark) body {
     left: 0;
     z-index: $z-canvas;
     width: 100%;
-    height: 100vh;
-    height: 100lvh;
+    // Plus the home-bar inset, which the large viewport still leaves out
+    height: calc(100lvh + env(safe-area-inset-bottom));
   }
 
   .canvas {
@@ -109,8 +109,8 @@ html:has(.liquid.is-dark) body {
 
   .logo {
     position: absolute;
-    top: $space-md;
-    left: $space-md;
+    @include safe-offset(top, $space-md);
+    @include safe-offset(left, $space-md);
     z-index: $z-ui;
     font-family: $font-display;
     // Decorative overlay; pointer input should reach the liquid beneath
@@ -120,8 +120,8 @@ html:has(.liquid.is-dark) body {
     letter-spacing: $letter-spacing-logo;
 
     @include mq($bp-tablet) {
-      top: $space-lg;
-      left: $space-lg;
+      @include safe-offset(top, $space-lg);
+      @include safe-offset(left, $space-lg);
       font-size: $font-size-logo-lg;
     }
   }
@@ -129,8 +129,8 @@ html:has(.liquid.is-dark) body {
   // Bottom-left, centred on the controls toggle's row
   .copyright {
     position: absolute;
-    bottom: $space-md;
-    left: $space-md;
+    @include safe-offset(bottom, $space-md);
+    @include safe-offset(left, $space-md);
     z-index: $z-ui;
     display: flex;
     align-items: center;
@@ -141,20 +141,20 @@ html:has(.liquid.is-dark) body {
     letter-spacing: $letter-spacing-label;
 
     @include mq($bp-tablet) {
-      bottom: $space-lg;
-      left: $space-lg;
+      @include safe-offset(bottom, $space-lg);
+      @include safe-offset(left, $space-lg);
     }
   }
 
   .control {
     position: absolute;
-    right: $space-md;
-    bottom: $space-md;
+    @include safe-offset(right, $space-md);
+    @include safe-offset(bottom, $space-md);
     z-index: $z-ui;
 
     @include mq($bp-tablet) {
-      right: $space-lg;
-      bottom: $space-lg;
+      @include safe-offset(right, $space-lg);
+      @include safe-offset(bottom, $space-lg);
     }
 
     .btn,

@@ -13,6 +13,17 @@
   height: 100dvh;
 }
 
+// Keeps UI clear of the notch / home bar when the page runs edge to edge (home-screen app).
+// Bottom takes the larger of the two so the Safari tab, whose toolbar already clears the
+// home bar, keeps its usual spacing
+@mixin safe-offset($side, $space) {
+  @if $side == bottom {
+    #{$side}: max(#{$space}, env(safe-area-inset-#{$side}));
+  } @else {
+    #{$side}: calc(#{$space} + env(safe-area-inset-#{$side}));
+  }
+}
+
 @mixin flex-center {
   display: flex;
   align-items: center;
