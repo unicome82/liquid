@@ -1,6 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
+import { DropRain } from './drop';
 import { RippleField, type GroupOf, type Ripple } from './ripple';
 
 interface Body {
@@ -89,6 +90,7 @@ export class LiquidSimulation {
   private bodies: Body[] = [];
   private cutTrail = new CutTrail();
   private rippleField = new RippleField();
+  private dropRain = new DropRain();
   /** Connected body of liquid per blob, refreshed every step */
   private groups = new Map<Body, number>();
   private groupOf: GroupOf = (body) => this.groups.get(body as Body) ?? -1;
@@ -161,7 +163,7 @@ export class LiquidSimulation {
         body.homeY = body.y - driftY;
       }
 
-      if (pointer.active && mode !== 'move') applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
+      if (pointer.active && isFieldMode(mode)) applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
       this.rippleField.push(body, this.groupOf, scaleX, scaleY, dt);
       if (body === this.dragged) {
         const targetX = pointer.x - this.grabOffset.x;
@@ -183,6 +185,10 @@ export class LiquidSimulation {
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
     this.groups = findGroups(this.bodies, scaleX, scaleY);
     this.rippleField.update(dt, pointer, mode === 'ripple', intensity, this.bodies, scaleX, scaleY);
+    // A drop landing sends a ring through the body it joined
+    this.dropRain.update(dt, pointer, mode === 'drop', intensity, this.bodies, scaleX, scaleY, (target, x, y) =>
+      this.rippleField.emit(x, y, target as Body, intensity),
+    );
   }
 
 
@@ -218,7 +224,15 @@ export class LiquidSimulation {
       color: body.color,
       group: this.groupOf(body),
     }));
-    return bodies;
+    const drops = this.dropRain.getDrops().map(({ x, y, radius, color, merge, target }) => ({
+      x,
+      y,
+      radius,
+      color,
+      merge,
+      group: this.groupOf(target as Body),
+    }));
+    return [...bodies, ...drops];
   }
 
   getCuts(): CutPoint[] {
@@ -257,7 +271,9 @@ function findGroups(bodies: Body[], scaleX: number, scaleY: number): Map<Body, n
 }
 
 /** Pointer field forces; a moved drop is handled by the drag instead */
-type FieldMode = Exclude<InteractionMode, 'move'>;
+type FieldMode = Exclude<InteractionMode, 'move' | 'drop'>;
+
+const isFieldMode = (mode: InteractionMode): mode is FieldMode => mode !== 'move' && mode !== 'drop';
 
 function modeDirection(mode: FieldMode, nx: number, ny: number): [number, number] {
   switch (mode) {

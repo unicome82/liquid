@@ -85,7 +85,7 @@ export class RippleField {
       // Recorded even with no drop under the press so a drag keeps its spacing
       this.lastSpawn = { x: pointer.x, y: pointer.y, time: this.clock };
       const source = touchedBody(pointer, bodies, scaleX, scaleY);
-      if (source) this.spawn(pointer, source, intensity);
+      if (source) this.emit(pointer.x, pointer.y, source, intensity);
     }
   }
 
@@ -116,11 +116,12 @@ export class RippleField {
     }
   }
 
-  private spawn(pointer: PointerInput, source: Floater, intensity: number) {
+  /** Starts a ring at a point inside the given drop's body of liquid. */
+  emit(x: number, y: number, source: Floater, intensity: number) {
     this.ripples.push({
       source,
-      x: pointer.x,
-      y: pointer.y,
+      x,
+      y,
       age: 0,
       speed: lerp(SPEED, intensity),
       amplitude: lerp(AMPLITUDE, intensity),
