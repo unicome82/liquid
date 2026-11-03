@@ -50,6 +50,8 @@ const float DENT_DEPTH = 0.02;
 const float DENT_BOWL = 0.06;
 const float DENT_RIM = 0.02;
 const float DENT_SMOOTH = 0.06;
+// Trough along a pulled arm, as a share of the arm's width
+const float GROOVE_SCALE = 0.5;
 // Colours closer than this count as one hue, so a blob and its own dough don't read as a seam
 const float COLOR_MATCH = 0.02;
 const float SOLE_HUE = 0.999;
@@ -195,8 +197,17 @@ float sceneSdf(vec2 p) {
 
 // Surface pushed down under the fingertip trail; only shading reads it, the outline stays
 float dentDepth(vec2 p) {
-  if (uDentCount < 1) return 0.0;
-  return DENT_DEPTH * smoothstep(DENT_RIM, -DENT_BOWL, trailSdf(p, uDents, uDentCount, DENT_SMOOTH));
+  float depth = 0.0;
+  if (uDentCount >= 1) {
+    depth = DENT_DEPTH * smoothstep(DENT_RIM, -DENT_BOWL, trailSdf(p, uDents, uDentCount, DENT_SMOOTH));
+  }
+  // The finger that drew the dough out is still pressing it, so the arm is troughed, not domed
+  if (uPullTip.z > 0.0) {
+    vec3 root = vec3(uPullRoot.xy, uPullRoot.z * GROOVE_SCALE);
+    vec3 tip = vec3(uPullTip.xy, uPullTip.z * GROOVE_SCALE);
+    depth = max(depth, DENT_DEPTH * smoothstep(DENT_RIM, -DENT_BOWL, taperedSegmentSdf(p, root, tip)));
+  }
+  return depth;
 }
 
 // Circular profile so the rim curves down like a droplet edge
