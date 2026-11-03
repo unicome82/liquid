@@ -118,3 +118,4 @@
 - Silver/Gold 원복 METAL_HEIGHT_CEILING 0.04→0.12. Pastel/Vivid 두께↑·경계 부드럽게 BEVEL 0.08→0.13, 비율 0.35→0.5 (t³ 프로파일 유지). Water 두께↑ WATER_HEIGHT_CEILING 0.05→0.08. 스크린샷 ✅ `npm run build` ✅
 - Silver/Gold 높이 0.08(중간). Pastel/Vivid 더 완만: BEVEL 0.13→0.2, 비율 0.5→0.7. 그림자 → 비치는 그림자: 밝은 테마는 물방울 색이 배경에 투과(SHADOW_TRANSMIT 0.7, 세기 0.45), 크롬은 기존 회색 그림자 유지. Water는 거의 투명한 빛 번짐. 스크린샷 ✅ `npm run build` ✅
 - 레퍼런스(광택 폴리시 방울) 반영: 작고 선명한 하이라이트(SPECULAR 320/0.95, sheen 0.05), 가장자리 색 깊게(BODY_EDGE_DEPTH 0.45), 흰 림 약화(RIM 0.15), 명암 대비 SHADE_MIN 0.82. 바닥: 얇은 접촉 그림자 + 물방울 색이 아래로 비치는 반사(유리/대리석). 크롬은 기존 그림자. 스크린샷 ✅ `npm run build` ✅
+- 그림자 전부 삭제(셰이더 background·uShadowTint·$color-shadow 제거). 어두운 면 좁고 진하게: SHADE_MIN 0.82→0.9, 가장자리 깊이 0.45→0.75를 1-n.z 0.3~0.85 구간에만. 스크린샷 ✅ `npm run build` ✅

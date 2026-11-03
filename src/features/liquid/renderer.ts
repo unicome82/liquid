@@ -26,7 +26,6 @@ export interface Palette {
   bgTop: Rgb;
   bgBottom: Rgb;
   bgAccent: Rgb;
-  shadowTint: Rgb;
   transition: Rgb;
   /** 0–1 blend toward chrome */
   metal: number;
@@ -122,7 +121,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
-    shadowTint: gl.getUniformLocation(program, 'uShadowTint'),
     transition: gl.getUniformLocation(program, 'uTransition'),
     metal: gl.getUniformLocation(program, 'uMetal'),
     water: gl.getUniformLocation(program, 'uWater'),
@@ -244,7 +242,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);
-    gl!.uniform3fv(uniforms.shadowTint, palette.shadowTint);
     gl!.uniform3fv(uniforms.transition, palette.transition);
     gl!.uniform1f(uniforms.metal, palette.metal);
     gl!.uniform1f(uniforms.water, palette.water);

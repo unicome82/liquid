@@ -34,7 +34,6 @@ uniform float uRippleGroups[MAX_RIPPLES]; // the body each ring travels through
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
-uniform vec3 uShadowTint;
 uniform vec3 uTransition;
 uniform float uMetal;              // 0–1 blend toward chrome
 uniform float uWater;              // 0–1 blend toward clear water
@@ -62,29 +61,21 @@ const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
 const float TRANSITION_LIFT = 0.65;
 
-// Light from almost straight above, so the contact shadow sits just under the drop
-const vec2 SHADOW_OFFSET = vec2(0.002, -0.008);
-const float SHADOW_BLUR = 0.03;
-const float SHADOW_STRENGTH = 0.16;
-// Glossy floor (marble / glass): a thin dark contact line where the drop touches,
-// plus a soft mirror image of the drop's colour spilling just below it
-const float CONTACT_WIDTH = 0.006;
-const float CONTACT_STRENGTH = 0.22;
-const vec2 REFLECT_OFFSET = vec2(0.0, -0.022);
-const float REFLECT_BLUR = 0.045;
-const float REFLECT_STRENGTH = 0.28;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 
 const vec3 LIGHT_DIR = vec3(-0.18, 0.75, 0.64);
-const float SHADE_MIN = 0.82;
+const float SHADE_MIN = 0.9;
 // Glossy like poured polish: a small, crisp highlight rather than a broad sheen
 const float SPECULAR_POWER = 320.0;
 const float SPECULAR_STRENGTH = 0.95;
 const float SHEEN_POWER = 6.0;
 const float SHEEN_STRENGTH = 0.05;
-// Liquid is thicker toward the rim, so the colour there reads deeper and richer
-const float BODY_EDGE_DEPTH = 0.45;
+// Liquid is thicker toward the rim, so the colour there reads deeper and richer;
+// kept to the steep outer band so the dark side stays narrow
+const float BODY_EDGE_DEPTH = 0.75;
+const float BODY_EDGE_START = 0.3;
+const float BODY_EDGE_END = 0.85;
 const float RIM_STRENGTH = 0.15;
 const float NORMAL_SAMPLE_PX = 2.0;
 
@@ -232,7 +223,7 @@ float sceneSdf(vec2 p) {
   // A passing ring swells and dents the edge too, so the drop moves with the wave
   // Fades out away from the edge, or a crest in open space would raise a stray speck
   if (uRippleCount > 0) d -= rippleHeight(p) * RIPPLE_OUTLINE * smoothstep(RIPPLE_EDGE_REACH, 0.0, d);
-  // No groove: skip the carve entirely, it runs for every normal/shadow sample
+  // No groove: skip the carve entirely, it runs for every normal sample
   if (uCutCount < 2) return d;
   return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
@@ -279,28 +270,6 @@ vec3 backdrop(vec2 uv) {
   float accent = smoothstep(0.7, 0.0, uv.y) * smoothstep(0.0, 1.0, uv.x);
   bg = mix(bg, uBgAccent, accent * ACCENT_AMOUNT);
   return mix(bg, uTextColor, texture2D(uText, uv).a * TEXT_OPACITY);
-}
-
-vec3 background(vec2 uv, vec2 p, float d) {
-  vec3 bg = backdrop(uv);
-
-  // Beyond this distance shadow and reflection are fully transparent, so skip their SDF pass
-  float reach = max(SHADOW_BLUR + length(SHADOW_OFFSET), REFLECT_BLUR + length(REFLECT_OFFSET));
-  if (d > reach) return bg;
-
-  // Chrome stays on its dark stage with the plain drop shadow
-  if (uMetal >= 1.0) {
-    float shadowD = sceneSdf(p - SHADOW_OFFSET);
-    float shadow = 1.0 - smoothstep(-SHADOW_BLUR * 0.5, SHADOW_BLUR, shadowD);
-    return mix(bg, bg * uShadowTint, shadow * SHADOW_STRENGTH);
-  }
-  float reflectD = sceneSdf(p - REFLECT_OFFSET);
-  float reflection = 1.0 - smoothstep(-REFLECT_BLUR * 0.5, REFLECT_BLUR, reflectD);
-  vec3 liquid;
-  blendBlobs(p - REFLECT_OFFSET, liquid);
-  vec3 floorCol = mix(bg, liquid, reflection * REFLECT_STRENGTH);
-  float contact = 1.0 - smoothstep(0.0, CONTACT_WIDTH, d);
-  return mix(floorCol, floorCol * uShadowTint, contact * CONTACT_STRENGTH);
 }
 
 // Soft ceiling on dome height: rims stay round but tops level out like a puddle.
@@ -362,7 +331,7 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   vec3 col = base * mix(SHADE_MIN, 1.0, diffuse);
   col += mix(base, vec3(1.0), 0.6) * fresnel * RIM_STRENGTH * diffuse;
   col += pow(nh, SHEEN_POWER) * SHEEN_STRENGTH;
-  col = mix(col, base * base, smoothstep(0.05, 0.7, 1.0 - n.z) * BODY_EDGE_DEPTH);
+  col = mix(col, base * base, smoothstep(BODY_EDGE_START, BODY_EDGE_END, 1.0 - n.z) * BODY_EDGE_DEPTH);
   col += pow(nh, SPECULAR_POWER) * SPECULAR_STRENGTH;
 
   // Only pay for the dome normal when a material actually uses it
@@ -379,12 +348,12 @@ void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) * px;
 
   float d = sceneSdf(p);
-  // Fully inside the liquid: the backdrop and its shadow would be painted over anyway
+  // Fully inside the liquid: the backdrop would be painted over anyway
   if (d <= -px) {
     gl_FragColor = vec4(shadeLiquid(uv, p, d, px), 1.0);
     return;
   }
-  vec3 bg = background(uv, p, d);
+  vec3 bg = backdrop(uv);
   float coverage = 1.0 - smoothstep(-px, px, d);
 
   if (coverage <= 0.0) {

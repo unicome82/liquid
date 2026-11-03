@@ -9,7 +9,6 @@ type ColorToken =
   | 'lavender'
   | 'cream'
   | 'offwhite'
-  | 'shadow'
   | 'night'
   | 'night-soft'
   | 'ink';
@@ -178,16 +177,14 @@ export function buildScene(): Scene {
     bgTop: readColorToken('offwhite'),
     bgBottom: readColorToken('offwhite'),
     bgAccent: readColorToken('offwhite'),
-    shadowTint: readColorToken('shadow'),
     transition: readColorToken('butter'),
     text: readColorToken('ink'),
   };
-  // Chrome needs a dark stage so its reflections read; the drop shadow becomes a dark halo
+  // Chrome needs a dark stage so its reflections read
   const darkPalette = {
     bgTop: readColorToken('night-soft'),
     bgBottom: readColorToken('night'),
     bgAccent: readColorToken('night-soft'),
-    shadowTint: readColorToken('night'),
     transition: basePalette.transition,
     text: readColorToken('cream'),
   };
