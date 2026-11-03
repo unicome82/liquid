@@ -8,6 +8,8 @@ export interface Ripple {
   radius: number;
   /** Wave height on the liquid surface, in the shader's height units */
   amplitude: number;
+  /** Connected body of liquid the ring travels through; other drops stay still */
+  group: number;
 }
 
 interface Span {
@@ -24,7 +26,12 @@ export interface Floater {
   radius: number;
 }
 
+/** Which connected body of liquid a blob belongs to this frame */
+export type GroupOf = (body: Floater) => number;
+
 interface LiveRipple {
+  /** Blob the ring started in; its body of liquid is the only one the wave reaches */
+  source: Floater;
   x: number;
   y: number;
   age: number;
@@ -44,6 +51,8 @@ const RING_PUSH = 0.8;
 // While dragging, a new ring every this much travel or time, whichever comes first
 const SPAWN_SPACING = 0.2;
 const SPAWN_INTERVAL = 1;
+/** A press this close to a drop's edge still starts a ring in it, short-side units */
+const TOUCH_REACH = 0.1;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 
@@ -58,6 +67,7 @@ export class RippleField {
     pointer: PointerInput,
     isRippling: boolean,
     intensity: number,
+    bodies: Floater[],
     scaleX: number,
     scaleY: number,
   ) {
@@ -72,23 +82,29 @@ export class RippleField {
     );
     const waited = this.clock - this.lastSpawn.time;
     if (pointer.tapped || travel >= SPAWN_SPACING || waited >= SPAWN_INTERVAL) {
-      this.spawn(pointer, intensity);
+      // Recorded even with no drop under the press so a drag keeps its spacing
+      this.lastSpawn = { x: pointer.x, y: pointer.y, time: this.clock };
+      const source = touchedBody(pointer, bodies, scaleX, scaleY);
+      if (source) this.spawn(pointer, source, intensity);
     }
   }
 
-  getRipples(): Ripple[] {
+  getRipples(groupOf: GroupOf): Ripple[] {
     // Ease-out fade so a ring is strongest right after the touch, then dies away softly
-    return this.ripples.map(({ x, y, age, speed, amplitude }) => ({
+    return this.ripples.map(({ source, x, y, age, speed, amplitude }) => ({
       x,
       y,
       radius: age * speed,
       amplitude: amplitude * (1 - age / LIFETIME) ** 2,
+      group: groupOf(source),
     }));
   }
 
   /** Rolls the blob outward while a ring's crest sweeps across it, so it bobs on the wave. */
-  push(body: Floater, scaleX: number, scaleY: number, dt: number) {
-    for (const ripple of this.getRipples()) {
+  push(body: Floater, groupOf: GroupOf, scaleX: number, scaleY: number, dt: number) {
+    const group = groupOf(body);
+    for (const ripple of this.getRipples(groupOf)) {
+      if (ripple.group < 0 || ripple.group !== group) continue;
       const dx = (body.x - ripple.x) * scaleX;
       const dy = (body.y - ripple.y) * scaleY;
       const distance = Math.hypot(dx, dy);
@@ -100,8 +116,9 @@ export class RippleField {
     }
   }
 
-  private spawn(pointer: PointerInput, intensity: number) {
+  private spawn(pointer: PointerInput, source: Floater, intensity: number) {
     this.ripples.push({
+      source,
       x: pointer.x,
       y: pointer.y,
       age: 0,
@@ -109,6 +126,19 @@ export class RippleField {
       amplitude: lerp(AMPLITUDE, intensity),
     });
     if (this.ripples.length > MAX_RIPPLES) this.ripples.shift();
-    this.lastSpawn = { x: pointer.x, y: pointer.y, time: this.clock };
   }
+}
+
+/** Drop under the press, or the nearest one whose edge is within reach */
+function touchedBody(pointer: PointerInput, bodies: Floater[], scaleX: number, scaleY: number) {
+  let nearest: Floater | null = null;
+  let bestEdge = TOUCH_REACH;
+  for (const body of bodies) {
+    const edge = Math.hypot((body.x - pointer.x) * scaleX, (body.y - pointer.y) * scaleY) - body.radius;
+    if (edge < bestEdge) {
+      bestEdge = edge;
+      nearest = body;
+    }
+  }
+  return nearest;
 }

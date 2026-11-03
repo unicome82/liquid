@@ -1,7 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
-import { RippleField, type Ripple } from './ripple';
+import { RippleField, type GroupOf, type Ripple } from './ripple';
 
 interface Body {
   homeX: number;
@@ -66,6 +66,10 @@ const CORE_RADIUS = 0.08;
 
 /** Pointer-repel share applied along a cut so the liquid visibly parts */
 const CUT_PUSH = 0.3;
+// Two drops read as one body while their gap is under half the shader's smooth-union
+// range (MERGE_K = 0.28); a ripple crosses only such joined drops
+const MERGE_GAP = 0.14;
+
 /** Gentle outward nudge so the touch that starts a ripple also stirs the liquid */
 const RIPPLE_PUSH = 0.4;
 
@@ -82,6 +86,9 @@ export class LiquidSimulation {
   private bodies: Body[] = [];
   private cutTrail = new CutTrail();
   private rippleField = new RippleField();
+  /** Connected body of liquid per blob, refreshed every step */
+  private groups = new Map<Body, number>();
+  private groupOf: GroupOf = (body) => this.groups.get(body as Body) ?? -1;
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
   /** Freezes the idle drift and pulse; touch still moves the liquid */
@@ -140,7 +147,7 @@ export class LiquidSimulation {
       const targetY = body.homeY + ampY * wave(t * DRIFT_Y_FREQ, body.phase + GOLDEN_ANGLE);
 
       if (pointer.active) applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
-      this.rippleField.push(body, scaleX, scaleY, dt);
+      this.rippleField.push(body, this.groupOf, scaleX, scaleY, dt);
       body.vx += ((targetX - body.x) * stiffness - body.vx * damping) * dt;
       body.vy += ((targetY - body.y) * stiffness - body.vy * damping) * dt;
       body.x += body.vx * dt;
@@ -151,7 +158,8 @@ export class LiquidSimulation {
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
 
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
-    this.rippleField.update(dt, pointer, mode === 'ripple', intensity, scaleX, scaleY);
+    this.groups = findGroups(this.bodies, scaleX, scaleY);
+    this.rippleField.update(dt, pointer, mode === 'ripple', intensity, this.bodies, scaleX, scaleY);
   }
 
 
@@ -163,6 +171,7 @@ export class LiquidSimulation {
         body.radius *
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
+      group: this.groupOf(body),
     }));
     return bodies;
   }
@@ -172,10 +181,34 @@ export class LiquidSimulation {
   }
 
   getRipples(): Ripple[] {
-    return this.rippleField.getRipples();
+    return this.rippleField.getRipples(this.groupOf);
   }
 
 
+}
+
+/** Labels each blob with its connected body of liquid (flood fill over touching drops). */
+function findGroups(bodies: Body[], scaleX: number, scaleY: number): Map<Body, number> {
+  const groups = new Map<Body, number>();
+  const touching = (a: Body, b: Body) =>
+    Math.hypot((a.x - b.x) * scaleX, (a.y - b.y) * scaleY) - a.radius - b.radius < MERGE_GAP;
+
+  let next = 0;
+  for (const start of bodies) {
+    if (groups.has(start)) continue;
+    const queue = [start];
+    groups.set(start, next);
+    while (queue.length) {
+      const body = queue.pop()!;
+      for (const other of bodies) {
+        if (groups.has(other) || !touching(body, other)) continue;
+        groups.set(other, next);
+        queue.push(other);
+      }
+    }
+    next++;
+  }
+  return groups;
 }
 
 function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, number] {

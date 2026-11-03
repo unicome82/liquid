@@ -27,6 +27,8 @@ uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove h
 uniform int uCutCount;             // live points; the rest of uCuts is unused
 uniform vec4 uRipples[MAX_RIPPLES]; // xy: centre (scene units), z: ring radius, w: amplitude
 uniform int uRippleCount;
+uniform float uBlobGroups[BLOB_COUNT];   // connected body of liquid per blob
+uniform float uRippleGroups[MAX_RIPPLES]; // the body each ring travels through
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
@@ -162,10 +164,27 @@ float cutSdf(vec2 p) {
 }
 
 // Surface waves from touches, as a height; sceneSdf also bulges the outline with it
+// Body of liquid at p, taken from the nearest blob; joined drops share one
+float nearestGroup(vec2 p) {
+  float best = 1e5;
+  float group = -1.0;
+  for (int i = 0; i < BLOB_COUNT; i++) {
+    float d = blobSdf(p, uBlobs[i]);
+    if (d < best) {
+      best = d;
+      group = uBlobGroups[i];
+    }
+  }
+  return group;
+}
+
 float rippleHeight(vec2 p) {
   float h = 0.0;
+  float group = nearestGroup(p);
   for (int i = 0; i < MAX_RIPPLES; i++) {
     if (i >= uRippleCount) break;
+    // Separate drops don't carry the wave across the gap
+    if (abs(uRippleGroups[i] - group) > 0.5) continue;
     float offset = length(p - uRipples[i].xy) - uRipples[i].z;
     float envelope = exp(-(offset * offset) / (RIPPLE_WIDTH * RIPPLE_WIDTH));
     h += uRipples[i].w * envelope * cos(offset * TAU / RIPPLE_WAVELENGTH);
