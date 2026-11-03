@@ -1,5 +1,6 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
+import { MAX_RIPPLES } from './ripple';
 
 // Shader arrays are fixed-size, so allocate for the largest amount
 export const BLOB_COUNT = AMOUNT_RANGE.max;
@@ -17,12 +18,15 @@ precision highp float;
 
 #define BLOB_COUNT ${BLOB_COUNT}
 #define CUT_POINTS ${CUT_POINTS}
+#define MAX_RIPPLES ${MAX_RIPPLES}
 
 uniform vec2 uResolution;
 uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: merge range (0 = default)
 uniform vec3 uColors[BLOB_COUNT];
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform int uCutCount;             // live points; the rest of uCuts is unused
+uniform vec4 uRipples[MAX_RIPPLES]; // xy: centre (scene units), z: ring radius, w: amplitude
+uniform int uRippleCount;
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
@@ -37,6 +41,10 @@ uniform vec3 uTextColor;
 const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
 const float CUT_SMOOTH = 0.1;
+// Ripple ring: a short wave packet this wide, with crests this far apart
+const float RIPPLE_WIDTH = 0.07;
+const float RIPPLE_WAVELENGTH = 0.06;
+const float TAU = 6.28318;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
 // How quickly neighbouring blob colours fade into each other
@@ -87,6 +95,8 @@ const float ENV_STREAK_DARK = 0.3;
 // A thin film lying on the text: the flat middle shows it undistorted, only the
 // curved rim bends it
 const float WATER_REFRACTION = 0.06;
+// Refraction magnifies every slope; full-height ripples would shred the text beneath
+const float WATER_RIPPLE_GAIN = 0.3;
 const float WATER_HEIGHT_CEILING = 0.05;
 const float WATER_TINT = 0.5;
 const float WATER_CAUSTIC = 0.18;
@@ -226,10 +236,24 @@ float flatten(float h, float ceiling) {
   return ceiling > 0.0 ? h / (1.0 + h / ceiling) : h;
 }
 
-vec3 domeNormal(vec2 p, float eps, float ceiling) {
-  float h = flatten(domeHeight(p), ceiling);
-  float hx = flatten(domeHeight(p + vec2(eps, 0.0)), ceiling);
-  float hy = flatten(domeHeight(p + vec2(0.0, eps)), ceiling);
+// Surface waves from touches; only shading reads them, so the outline never wobbles
+float rippleHeight(vec2 p) {
+  float h = 0.0;
+  for (int i = 0; i < MAX_RIPPLES; i++) {
+    if (i >= uRippleCount) break;
+    float offset = length(p - uRipples[i].xy) - uRipples[i].z;
+    float envelope = exp(-(offset * offset) / (RIPPLE_WIDTH * RIPPLE_WIDTH));
+    h += uRipples[i].w * envelope * cos(offset * TAU / RIPPLE_WAVELENGTH);
+  }
+  return h;
+}
+
+vec3 domeNormal(vec2 p, float eps, float ceiling, float rippleGain) {
+  vec2 ex = vec2(eps, 0.0);
+  vec2 ey = vec2(0.0, eps);
+  float h = flatten(domeHeight(p), ceiling) + rippleHeight(p) * rippleGain;
+  float hx = flatten(domeHeight(p + ex), ceiling) + rippleHeight(p + ex) * rippleGain;
+  float hy = flatten(domeHeight(p + ey), ceiling) + rippleHeight(p + ey) * rippleGain;
   return normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 }
 
@@ -256,9 +280,11 @@ vec3 shadeWater(vec2 uv, vec3 tint, vec3 n, vec3 l, vec3 halfVec) {
 
 vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
-  float h = heightFromSdf(d);
-  float hx = heightFromSdf(sceneSdf(p + vec2(eps, 0.0)));
-  float hy = heightFromSdf(sceneSdf(p + vec2(0.0, eps)));
+  vec2 ex = vec2(eps, 0.0);
+  vec2 ey = vec2(0.0, eps);
+  float h = heightFromSdf(d) + rippleHeight(p);
+  float hx = heightFromSdf(sceneSdf(p + ex)) + rippleHeight(p + ex);
+  float hy = heightFromSdf(sceneSdf(p + ey)) + rippleHeight(p + ey);
   vec3 n = normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 
   vec3 l = normalize(LIGHT_DIR);
@@ -275,8 +301,8 @@ vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
 
   // Only pay for the dome normal when a material actually uses it
   if (uMetal + uWater <= 0.0) return col;
-  if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING)), uMetal);
-  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, WATER_HEIGHT_CEILING), l, halfVec), uWater);
+  if (uMetal > 0.0) col = mix(col, shadeChrome(base, domeNormal(p, eps, METAL_HEIGHT_CEILING, 1.0)), uMetal);
+  if (uWater > 0.0) col = mix(col, shadeWater(uv, base, domeNormal(p, eps, WATER_HEIGHT_CEILING, WATER_RIPPLE_GAIN), l, halfVec), uWater);
   return col;
 }
 

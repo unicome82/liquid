@@ -1,6 +1,7 @@
 import { backdropFontReady, drawBackdropText } from './backdropText';
 import { CUT_POINTS, type CutPoint } from './cut';
 import { isTouchDevice } from './quality';
+import { MAX_RIPPLES, type Ripple } from './ripple';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
 export type Rgb = [number, number, number];
@@ -34,7 +35,7 @@ export interface Palette {
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], ripples: Ripple[], palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -105,6 +106,8 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
     cutCount: gl.getUniformLocation(program, 'uCutCount'),
+    ripples: gl.getUniformLocation(program, 'uRipples'),
+    rippleCount: gl.getUniformLocation(program, 'uRippleCount'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -119,6 +122,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
   const colorData = new Float32Array(BLOB_COUNT * STRIDE);
   const cutData = new Float32Array(CUT_POINTS * STRIDE);
+  const rippleData = new Float32Array(MAX_RIPPLES * BLOB_STRIDE);
 
   // Backdrop copy: drawn on a 2D canvas, uploaded as a texture, redrawn only when the
   // CSS size changes (adaptive quality rescales the GL canvas far more often)
@@ -193,14 +197,27 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     });
   }
 
-  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette) {
+  function packRipples(ripples: Ripple[]) {
+    rippleData.fill(0);
+    ripples.slice(0, MAX_RIPPLES).forEach((ripple, i) => {
+      rippleData.set(
+        [...toScene(ripple.x, ripple.y), ripple.radius, ripple.amplitude],
+        i * BLOB_STRIDE,
+      );
+    });
+  }
+
+  function render(blobs: Blob[], cuts: CutPoint[], ripples: Ripple[], palette: Palette) {
     packBlobs(blobs);
     packCuts(cuts);
+    packRipples(ripples);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
     gl!.uniform4fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
     gl!.uniform1i(uniforms.cutCount, Math.min(cuts.length, CUT_POINTS));
+    gl!.uniform4fv(uniforms.ripples, rippleData);
+    gl!.uniform1i(uniforms.rippleCount, Math.min(ripples.length, MAX_RIPPLES));
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);

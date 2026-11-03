@@ -64,7 +64,12 @@ export function startLiquidLoop(
     syncLayout(aspect, amount, size, theme);
     simulation.reduceMotion = reducedMotion.matches;
     simulation.step(dt, aspect, normalizedIntensity, pointer.snapshot(dt), mode);
-    renderer.render(simulation.getBlobs(), simulation.getCuts(), scene.getPalette(theme));
+    renderer.render(
+      simulation.getBlobs(),
+      simulation.getCuts(),
+      simulation.getRipples(),
+      scene.getPalette(theme),
+    );
   };
 
   const start = () => {

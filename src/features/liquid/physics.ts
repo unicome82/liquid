@@ -1,6 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
+import { RippleField, type Ripple } from './ripple';
 
 interface Body {
   homeX: number;
@@ -65,6 +66,8 @@ const CORE_RADIUS = 0.08;
 
 /** Pointer-repel share applied along a cut so the liquid visibly parts */
 const CUT_PUSH = 0.3;
+/** Gentle outward nudge so the touch that starts a ripple also stirs the liquid */
+const RIPPLE_PUSH = 0.4;
 
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
@@ -78,6 +81,7 @@ function wave(t: number, phase: number): number {
 export class LiquidSimulation {
   private bodies: Body[] = [];
   private cutTrail = new CutTrail();
+  private rippleField = new RippleField();
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
   /** Freezes the idle drift and pulse; touch still moves the liquid */
@@ -146,6 +150,7 @@ export class LiquidSimulation {
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
 
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
+    this.rippleField.update(dt, pointer, mode === 'ripple', intensity, scaleX, scaleY);
   }
 
 
@@ -165,6 +170,10 @@ export class LiquidSimulation {
     return this.cutTrail.getPoints();
   }
 
+  getRipples(): Ripple[] {
+    return this.rippleField.getRipples();
+  }
+
 
 }
 
@@ -176,6 +185,8 @@ function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, 
       return [nx, ny];
     case 'cut':
       return [nx * CUT_PUSH, ny * CUT_PUSH];
+    case 'ripple':
+      return [nx * RIPPLE_PUSH, ny * RIPPLE_PUSH];
   }
 }
 
