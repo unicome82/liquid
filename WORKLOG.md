@@ -112,3 +112,4 @@
 - 배경 미드센츄리 오프화이트 단색 #f2ece0 (그라데이션·핑크 액센트 제거). 그림자 붉은기 원인 = 라벤더 tint → 웜그레이 #8f877c, 크기 축소 offset (0.002,-0.008) / blur 0.03 / 0.3. 빛 위쪽으로 LIGHT_DIR (-0.18,0.75,0.64), 크롬 softbox도 맞춤.
 - 셰이더 최적화: uBlobCount로 빈 슬롯 루프 생략, 색·반경 루프 통합(blendBlobs), domeNormal이 shadeLiquid의 SDF·ripple 샘플 재사용, 리플 없으면 nearestGroup 생략, 완전히 덮인 픽셀은 배경·그림자 생략. 헤드리스 A/B 약 2.1배 (pastel/water/gold, 모바일 동일).
 - 모바일 선명도: 터치 DPR 상한 1.5→2, 최소 품질 0.7→0.75 (최저 1.5px/CSS px). 스크린샷 데스크톱 + 모바일 ✅ 콘솔 에러 없음 ✅ `npm run build` ✅
+- 그림자 연하게 0.3→0.16. Vivid 교체 #e8b43b #db713a #c74732 #788b43 #287e79 #283f60 (Pastel은 흰색 60% 자동). Silver/Gold 윗면 납작하게 METAL_HEIGHT_CEILING 0.12→0.04. 스크린샷 ✅ 콘솔 에러 없음 ✅ `npm run build` ✅

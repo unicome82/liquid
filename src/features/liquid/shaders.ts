@@ -65,7 +65,7 @@ const float TRANSITION_LIFT = 0.65;
 // Light from almost straight above, so the contact shadow sits just under the drop
 const vec2 SHADOW_OFFSET = vec2(0.002, -0.008);
 const float SHADOW_BLUR = 0.03;
-const float SHADOW_STRENGTH = 0.3;
+const float SHADOW_STRENGTH = 0.16;
 const float ACCENT_AMOUNT = 0.2;
 const float TEXT_OPACITY = 0.85;
 
@@ -94,7 +94,7 @@ const vec2 ENV_SOFTBOX = vec2(-0.18, 0.65);
 const float ENV_SOFTBOX_SHARPNESS = 18.0;
 const float ENV_SOFTBOX_STRENGTH = 1.3;
 // Caps how tall chrome swells, so it sits flatter like the pastel liquid
-const float METAL_HEIGHT_CEILING = 0.12;
+const float METAL_HEIGHT_CEILING = 0.04;
 const float METAL_WHITE_START = 0.85;
 const float METAL_WHITE_END = 1.2;
 const float METAL_EDGE_LIFT = 0.12;

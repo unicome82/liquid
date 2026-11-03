@@ -11,13 +11,13 @@ $color-mint: #9ee6c7;
 $color-coral: #ff9f8f;
 
 // Retro record palette — vivid as-is, pastel derived from it so the two stay in step
-$retro-orange: #f3620f;
-$retro-yellow: #ffc20a;
-$retro-green: #67944b;
-$retro-teal: #078d8c;
-$retro-blue: #084973;
-$retro-red: #da0d1e;
-$retro-colors: ($retro-orange, $retro-yellow, $retro-green, $retro-teal, $retro-blue, $retro-red);
+$retro-mustard: #e8b43b;
+$retro-orange: #db713a;
+$retro-red: #c74732;
+$retro-olive: #788b43;
+$retro-teal: #287e79;
+$retro-navy: #283f60;
+$retro-colors: ($retro-mustard, $retro-orange, $retro-red, $retro-olive, $retro-teal, $retro-navy);
 $pastel-tint: 60%;
 
 @function pastel-list($colors) {
