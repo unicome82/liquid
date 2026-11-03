@@ -1,7 +1,6 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
-import { SplashField, type SplashHole } from './splash';
 import { RippleField, type GroupOf, type Ripple } from './ripple';
 
 interface Body {
@@ -90,7 +89,6 @@ export class LiquidSimulation {
   private bodies: Body[] = [];
   private cutTrail = new CutTrail();
   private rippleField = new RippleField();
-  private splash = new SplashField();
   /** Connected body of liquid per blob, refreshed every step */
   private groups = new Map<Body, number>();
   private groupOf: GroupOf = (body) => this.groups.get(body as Body) ?? -1;
@@ -185,7 +183,6 @@ export class LiquidSimulation {
     this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
     this.groups = findGroups(this.bodies, scaleX, scaleY);
     this.rippleField.update(dt, pointer, mode === 'ripple', intensity, this.bodies, scaleX, scaleY);
-    this.splash.update(dt, pointer, mode === 'splash', intensity, this.bodies, scaleX, scaleY);
   }
 
 
@@ -212,33 +209,19 @@ export class LiquidSimulation {
   }
 
   getBlobs(): Blob[] {
-    const bodies = this.bodies.map((body) => ({
+    return this.bodies.map((body) => ({
       x: body.x,
       y: body.y,
       radius:
         body.radius *
-        this.splash.radiusScale(body, body.radius) *
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
       group: this.groupOf(body),
     }));
-    const droplets = this.splash.getDroplets().map(({ x, y, radius, color, merge, host }) => ({
-      x,
-      y,
-      radius,
-      color,
-      merge,
-      group: this.groupOf(host as Body),
-    }));
-    return [...bodies, ...droplets];
   }
 
   getCuts(): CutPoint[] {
     return this.cutTrail.getPoints();
-  }
-
-  getHoles(): SplashHole[] {
-    return this.splash.getHoles();
   }
 
   getRipples(): Ripple[] {
@@ -273,9 +256,9 @@ function findGroups(bodies: Body[], scaleX: number, scaleY: number): Map<Body, n
 }
 
 /** Pointer field forces; a moved drop is handled by the drag instead */
-type FieldMode = Exclude<InteractionMode, 'move' | 'splash'>;
+type FieldMode = Exclude<InteractionMode, 'move'>;
 
-const isFieldMode = (mode: InteractionMode): mode is FieldMode => mode !== 'move' && mode !== 'splash';
+const isFieldMode = (mode: InteractionMode): mode is FieldMode => mode !== 'move';
 
 function modeDirection(mode: FieldMode, nx: number, ny: number): [number, number] {
   switch (mode) {
