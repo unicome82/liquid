@@ -54,9 +54,9 @@ const float TAU = 6.28318;
 const float RIPPLE_OUTLINE = 0.8;
 const float RIPPLE_EDGE_REACH = 0.025;
 // Depth of the rounded rim; smaller = flatter, larger = puffier
-const float BEVEL = 0.05;
+const float BEVEL = 0.08;
 // Small beads get a rim this share of their radius, so they keep a flat top instead of a peak
-const float BEVEL_RADIUS_SHARE = 0.25;
+const float BEVEL_RADIUS_SHARE = 0.35;
 // How quickly neighbouring blob colours fade into each other
 const float COLOR_SHARPNESS = 6.0;
 // Lifts the zone between two hues toward a light tone so blue→peach doesn't go grey
@@ -227,11 +227,12 @@ float sceneSdf(vec2 p) {
   return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
 
-// Circular profile so the rim curves down like a droplet edge
+// Rim curves down like a droplet edge. t³ (not a circle's t²) eases curvature to zero
+// where the rim meets the flat top, so there is no visible crease in the shading
 float heightFromSdf(float d, float bevel) {
   float inside = clamp(-d / bevel, 0.0, 1.0);
   float t = 1.0 - inside;
-  return sqrt(1.0 - t * t) * bevel;
+  return sqrt(1.0 - t * t * t) * bevel;
 }
 
 // Full rounded body for chrome and water: for a lone circle this is an exact hemisphere

@@ -114,3 +114,4 @@
 - 모바일 선명도: 터치 DPR 상한 1.5→2, 최소 품질 0.7→0.75 (최저 1.5px/CSS px). 스크린샷 데스크톱 + 모바일 ✅ 콘솔 에러 없음 ✅ `npm run build` ✅
 - 그림자 연하게 0.3→0.16. Vivid 교체 #e8b43b #db713a #c74732 #788b43 #287e79 #283f60 (Pastel은 흰색 60% 자동). Silver/Gold 윗면 납작하게 METAL_HEIGHT_CEILING 0.12→0.04. 스크린샷 ✅ 콘솔 에러 없음 ✅ `npm run build` ✅
 - Pastel/Vivid 윗면 납작하게(Silver/Gold와 맞춤): BEVEL 0.12→0.05, BEVEL_RADIUS_SHARE 0.5→0.25. 스크린샷 ✅ `npm run build` ✅
+- 납작한 윗면 경계 부드럽게: 림 프로파일 sqrt(1-t²)→sqrt(1-t³) (윗면과 만나는 곳 곡률 0), BEVEL 0.05→0.08, 비율 0.25→0.35. 스크린샷 ✅ `npm run build` ✅
