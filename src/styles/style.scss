@@ -47,6 +47,8 @@ html,
 body {
   overflow: hidden;
   overscroll-behavior: none;
+  // iOS ignores user-scalable=no, so block double-tap zoom on controls and text too
+  touch-action: manipulation;
 }
 
 body {

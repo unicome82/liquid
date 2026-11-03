@@ -107,3 +107,4 @@
 - **Move 늘어남 + 밀어내기**: 셰이더 `uStretch`로 물방울을 이동 방향 타원(면적 유지)으로 그림, 늘어남 = 속도×0.35(최대 0.7), 형태 스프링 90/s²·ζ0.3이라 놓으면 출렁이며 원형 복귀(다른 모드에서 움직일 때도 적용). 물방울 밖을 누른 채 움직이면 가장자리가 손끝에서 0.14–0.24 떨어질 때까지 비켜남(정지 위치 기준이라 밀다가 힘이 약해지지 않음). 주의: GLSL ES 1.0은 함수 인자로 uniform 배열 인덱싱 불가 → 값을 넘김. 드래그 스크린샷 desktop + mobile ✅ (headless 저fps라 밀림 폭은 실기기 확인 필요) `npm run build` ✅
 - Shadow tightened so blobs sit on the surface: offset (0.025,-0.045)→(0.008,-0.014), blur 0.14→0.05, strength 0.2→0.26. Screenshots desktop + mobile ✅ `npm run build` ✅
 - Vivid theme more saturated: #1e9bff,#00c98d,#8a5cff,#ff3d8b,#ff8a1f,#ff4a3d → #0077ff,#00d96f,#7a2cff,#ff1477,#ff7a00,#ff2a2a. Screenshots desktop + mobile ✅ `npm run build` ✅
+- Mobile zoom off: viewport maximum-scale=1, user-scalable=no + html/body touch-action: manipulation (iOS ignores user-scalable). Preview LIQUID updated. `npm run build` ✅
