@@ -22,6 +22,24 @@ export interface SplashBlob {
   host: Pool;
 }
 
+/** A punched opening in a body where it was tapped; closes as the droplets come home */
+export interface SplashHole {
+  /** 0–1 across the viewport */
+  x: number;
+  y: number;
+  /** Short-side units */
+  radius: number;
+}
+
+interface Hole extends SplashHole {
+  host: Pool;
+  /** Tap point relative to the host centre, so the opening rides along with it */
+  offsetX: number;
+  offsetY: number;
+  targetRadius: number;
+  age: number;
+}
+
 interface Span {
   min: number;
   max: number;
@@ -37,19 +55,26 @@ interface Droplet extends SplashBlob {
 }
 
 /** Fixed shader slots on top of the layout blobs; the oldest droplet is dropped beyond this */
-export const MAX_SPLASH_DROPLETS = 8;
+export const MAX_SPLASH_DROPLETS = 10;
+/** Openings punched at once; the oldest closes instantly beyond this */
+export const MAX_SPLASH_HOLES = 3;
 /** Droplets per tap; high intensity shatters into more */
-const COUNT: Span = { min: 5, max: 8 };
+const COUNT: Span = { min: 7, max: 10 };
 /** Short-side units */
-const DROPLET_RADIUS: Span = { min: 0.022, max: 0.04 };
+const DROPLET_RADIUS: Span = { min: 0.026, max: 0.045 };
 /** How far past the host's edge a droplet lands, short-side units; high intensity flings further */
-const FLING_DISTANCE: Span = { min: 0.08, max: 0.16 };
+const FLING_DISTANCE: Span = { min: 0.18, max: 0.34 };
 /** Random spread of each droplet's reach and size, as a share of it */
 const JITTER = 0.4;
 /** Most of a body's area one tap may fling out, so small bodies don't vanish */
-const MAX_AREA_SHARE = 0.35;
-/** 1/s — air drag that brings a flung droplet to rest */
-const FLIGHT_DRAG = 2.5;
+const MAX_AREA_SHARE = 0.5;
+/** 1/s — air drag; high so the launch is a sharp burst that settles quickly */
+const FLIGHT_DRAG = 4.5;
+/** Hole radius as a share of the host's; high intensity tears a wider one */
+const HOLE_SHARE: Span = { min: 0.4, max: 0.6 };
+/** 1/s — the hole tears open almost at once, then knits back slowly */
+const HOLE_OPEN_RATE = 25;
+const HOLE_CLOSE_RATE = 1.6;
 /** Seconds a droplet floats free before it starts heading home */
 const REST_TIME = 0.8;
 /** Seconds over which the pull home eases in, so it doesn't snap back */
@@ -78,6 +103,7 @@ const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
 /** Tapping a body breaks it into small droplets that fly out, rest, and flow back in. */
 export class SplashField {
   private droplets: Droplet[] = [];
+  private holes: Hole[] = [];
 
   update(
     dt: number,
@@ -109,7 +135,9 @@ export class SplashField {
 
       const depth = Math.hypot((host.x - drop.x) * scaleX, (host.y - drop.y) * scaleY);
       const gap = Math.max(depth - host.radius - drop.radius, 0);
-      drop.merge = MERGE_JOINED + (MERGE_APART - MERGE_JOINED) * Math.min(gap / MERGE_APPROACH, 1);
+      // Kept apart on the way out so the burst reads as separate beads, not stretched necks
+      const joined = MERGE_APART + (MERGE_JOINED - MERGE_APART) * homing;
+      drop.merge = joined + (MERGE_APART - joined) * Math.min(gap / MERGE_APPROACH, 1);
       if (!drop.absorbed && drop.age > REST_TIME && depth < host.radius * ABSORB_DEPTH) {
         drop.absorbed = true;
         drop.targetRadius = 0;
@@ -118,6 +146,23 @@ export class SplashField {
       drop.radius += (drop.targetRadius - drop.radius) * (1 - Math.exp(-rate * dt));
     }
     this.droplets = this.droplets.filter((d) => d.targetRadius > 0 || d.radius > RADIUS_EPSILON);
+    this.updateHoles(dt, bodies);
+  }
+
+  getHoles(): SplashHole[] {
+    return this.holes.map(({ x, y, radius }) => ({ x, y, radius }));
+  }
+
+  private updateHoles(dt: number, bodies: Pool[]) {
+    for (const hole of this.holes) {
+      hole.age += dt;
+      if (hole.age > REST_TIME || !bodies.includes(hole.host)) hole.targetRadius = 0;
+      hole.x = hole.host.x + hole.offsetX;
+      hole.y = hole.host.y + hole.offsetY;
+      const rate = hole.targetRadius > hole.radius ? HOLE_OPEN_RATE : HOLE_CLOSE_RATE;
+      hole.radius += (hole.targetRadius - hole.radius) * (1 - Math.exp(-rate * dt));
+    }
+    this.holes = this.holes.filter((h) => h.targetRadius > 0 || h.radius > RADIUS_EPSILON);
   }
 
   getDroplets(): SplashBlob[] {
@@ -139,6 +184,17 @@ export class SplashField {
     const size = Math.min(lerp(DROPLET_RADIUS, intensity), host.radius * Math.sqrt(MAX_AREA_SHARE / count));
     // Random start angle so repeated taps don't spray the same star
     const offset = Math.random() * Math.PI * 2;
+    this.holes.push({
+      x: pointer.x,
+      y: pointer.y,
+      radius: 0,
+      targetRadius: host.radius * lerp(HOLE_SHARE, intensity),
+      host,
+      offsetX: pointer.x - host.x,
+      offsetY: pointer.y - host.y,
+      age: 0,
+    });
+    this.holes.splice(0, Math.max(this.holes.length - MAX_SPLASH_HOLES, 0));
     for (let i = 0; i < count; i++) {
       const angle = offset + (i / count) * Math.PI * 2;
       const dirX = Math.cos(angle);
@@ -154,7 +210,7 @@ export class SplashField {
         vy: (dirY * launch) / scaleY,
         radius: 0,
         targetRadius: size * (1 + JITTER * (Math.random() - 0.5)),
-        merge: MERGE_JOINED,
+        merge: MERGE_APART,
         color: host.color,
         host,
         age: 0,

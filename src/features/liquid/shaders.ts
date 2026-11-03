@@ -1,6 +1,6 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
-import { MAX_SPLASH_DROPLETS } from './splash';
+import { MAX_SPLASH_DROPLETS, MAX_SPLASH_HOLES } from './splash';
 import { MAX_RIPPLES } from './ripple';
 
 // Shader arrays are fixed-size, so allocate for the largest amount plus splash droplets
@@ -20,6 +20,7 @@ precision highp float;
 #define BLOB_COUNT ${BLOB_COUNT}
 #define CUT_POINTS ${CUT_POINTS}
 #define MAX_RIPPLES ${MAX_RIPPLES}
+#define MAX_HOLES ${MAX_SPLASH_HOLES}
 
 uniform vec2 uResolution;
 uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: merge range (0 = default)
@@ -28,6 +29,8 @@ uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove h
 uniform int uCutCount;             // live points; the rest of uCuts is unused
 uniform vec4 uRipples[MAX_RIPPLES]; // xy: centre (scene units), z: ring radius, w: amplitude
 uniform int uRippleCount;
+uniform vec3 uHoles[MAX_HOLES];    // xy: centre (scene units), z: radius
+uniform int uHoleCount;
 uniform float uBlobGroups[BLOB_COUNT];   // connected body of liquid per blob
 uniform float uRippleGroups[MAX_RIPPLES]; // the body each ring travels through
 uniform vec3 uBgTop;
@@ -44,6 +47,8 @@ uniform vec3 uTextColor;
 const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
 const float CUT_SMOOTH = 0.1;
+// Soft rim on a splash hole so it reads as torn liquid, not a stamped circle
+const float HOLE_SMOOTH = 0.04;
 // Ripple ring: a short wave packet this wide, with crests this far apart
 const float RIPPLE_WIDTH = 0.15;
 const float RIPPLE_WAVELENGTH = 0.14;
@@ -204,6 +209,10 @@ float sceneSdf(vec2 p) {
   // A passing ring swells and dents the edge too, so the drop moves with the wave
   // Fades out away from the edge, or a crest in open space would raise a stray speck
   if (uRippleCount > 0) d -= rippleHeight(p) * RIPPLE_OUTLINE * smoothstep(RIPPLE_EDGE_REACH, 0.0, d);
+  for (int i = 0; i < MAX_HOLES; i++) {
+    if (i >= uHoleCount) break;
+    d = smax(d, uHoles[i].z - length(p - uHoles[i].xy), HOLE_SMOOTH);
+  }
   // No groove: skip the carve entirely, it runs for every normal/shadow sample
   if (uCutCount < 2) return d;
   return smax(d, -cutSdf(p), CUT_SMOOTH);

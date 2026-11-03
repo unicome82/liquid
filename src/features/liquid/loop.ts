@@ -68,6 +68,7 @@ export function startLiquidLoop(
       simulation.getBlobs(),
       simulation.getCuts(),
       simulation.getRipples(),
+      simulation.getHoles(),
       scene.getPalette(theme),
     );
   };

@@ -1,7 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
 import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
-import { SplashField } from './splash';
+import { SplashField, type SplashHole } from './splash';
 import { RippleField, type GroupOf, type Ripple } from './ripple';
 
 interface Body {
@@ -235,6 +235,10 @@ export class LiquidSimulation {
 
   getCuts(): CutPoint[] {
     return this.cutTrail.getPoints();
+  }
+
+  getHoles(): SplashHole[] {
+    return this.splash.getHoles();
   }
 
   getRipples(): Ripple[] {

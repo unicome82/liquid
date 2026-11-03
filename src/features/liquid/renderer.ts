@@ -3,6 +3,7 @@ import { CUT_POINTS, type CutPoint } from './cut';
 import { isTouchDevice } from './quality';
 import { MAX_RIPPLES, type Ripple } from './ripple';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
+import { MAX_SPLASH_HOLES, type SplashHole } from './splash';
 
 export type Rgb = [number, number, number];
 
@@ -37,7 +38,7 @@ export interface Palette {
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  render: (blobs: Blob[], cuts: CutPoint[], ripples: Ripple[], palette: Palette) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], ripples: Ripple[], holes: SplashHole[], palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -114,6 +115,8 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     rippleCount: gl.getUniformLocation(program, 'uRippleCount'),
     blobGroups: gl.getUniformLocation(program, 'uBlobGroups'),
     rippleGroups: gl.getUniformLocation(program, 'uRippleGroups'),
+    holes: gl.getUniformLocation(program, 'uHoles'),
+    holeCount: gl.getUniformLocation(program, 'uHoleCount'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -131,6 +134,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const rippleData = new Float32Array(MAX_RIPPLES * BLOB_STRIDE);
   const blobGroupData = new Float32Array(BLOB_COUNT);
   const rippleGroupData = new Float32Array(MAX_RIPPLES);
+  const holeData = new Float32Array(MAX_SPLASH_HOLES * STRIDE);
 
   // Backdrop copy: drawn on a 2D canvas, uploaded as a texture, redrawn only when the
   // CSS size changes (adaptive quality rescales the GL canvas far more often)
@@ -217,10 +221,24 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     });
   }
 
-  function render(blobs: Blob[], cuts: CutPoint[], ripples: Ripple[], palette: Palette) {
+  function packHoles(holes: SplashHole[]) {
+    holeData.fill(0);
+    holes.slice(0, MAX_SPLASH_HOLES).forEach((hole, i) => {
+      holeData.set([...toScene(hole.x, hole.y), hole.radius], i * STRIDE);
+    });
+  }
+
+  function render(
+    blobs: Blob[],
+    cuts: CutPoint[],
+    ripples: Ripple[],
+    holes: SplashHole[],
+    palette: Palette,
+  ) {
     packBlobs(blobs);
     packCuts(cuts);
     packRipples(ripples);
+    packHoles(holes);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
     gl!.uniform4fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
@@ -230,6 +248,8 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform1i(uniforms.rippleCount, Math.min(ripples.length, MAX_RIPPLES));
     gl!.uniform1fv(uniforms.blobGroups, blobGroupData);
     gl!.uniform1fv(uniforms.rippleGroups, rippleGroupData);
+    gl!.uniform3fv(uniforms.holes, holeData);
+    gl!.uniform1i(uniforms.holeCount, Math.min(holes.length, MAX_SPLASH_HOLES));
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);
