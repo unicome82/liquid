@@ -123,3 +123,4 @@
 - iOS Safari 상태바·주소창 아래 잘림: 캔버스를 fixed + 100lvh로(툴바 뒤까지 그림), UI는 100dvh 유지. Chromium 모바일 스크린샷 ✅ (실기기 미확인) `npm run build` ✅
 - 아이폰 실기기: fixed 레이어가 툴바에서 끊기고 Safari가 단색 띠를 칠함 → .liquid·캔버스를 absolute로(툴바 아래로 이어짐), 어두운 테마는 html 배경을 night로 맞춰 상태바 색 일치. 스크롤 없음 확인 ✅ `npm run build` ✅ (실기기 미확인)
 - 하단 홈 바까지: 캔버스 높이 calc(100lvh + safe-area-inset-bottom). 홈 화면 앱: apple-mobile-web-app-capable + status-bar black-translucent(상태바까지 그림), UI는 safe-offset 믹스인으로 노치·홈바 회피. 레이아웃 변화 없음(데스크톱·모바일 스크린샷) ✅ `npm run build` ✅ (실기기 미확인)
+- 정리: 안 쓰는 ColorToken(sky·peach·pink·lavender)과 CSS 변수 6개 삭제(SCSS 디자인 토큰은 유지), WebGL 미지원 대체 배경을 레트로 팔레트 그라데이션으로. 화면 변화 없음·대체 화면 스크린샷 ✅ `npm run build` ✅

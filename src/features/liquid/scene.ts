@@ -2,11 +2,7 @@ import { COLOR_THEMES, isMetalTheme, type ColorTheme } from '../../shared/settin
 import type { Blob, Palette, Rgb } from './renderer';
 
 type ColorToken =
-  | 'sky'
   | 'butter'
-  | 'peach'
-  | 'pink'
-  | 'lavender'
   | 'cream'
   | 'offwhite'
   | 'night'

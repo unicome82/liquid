@@ -5,13 +5,7 @@
 
 :root {
   // Exposed so the WebGL renderer reads the same tokens as the CSS
-  --color-sky: #{$color-sky};
   --color-butter: #{$color-butter};
-  --color-peach: #{$color-peach};
-  --color-pink: #{$color-pink};
-  --color-lavender: #{$color-lavender};
-  --color-mint: #{$color-mint};
-  --color-coral: #{$color-coral};
 
   @each $name, $colors in $liquid-themes {
     @for $i from 1 through list.length($colors) {
@@ -104,7 +98,7 @@ html:has(.liquid.is-dark) body {
   }
 
   .fallback {
-    background: linear-gradient(135deg, $color-sky, $color-butter 45%, $color-peach 70%, $color-pink);
+    background: linear-gradient(135deg, $retro-mustard, $retro-orange 35%, $retro-teal 70%, $retro-navy);
   }
 
   .logo {
