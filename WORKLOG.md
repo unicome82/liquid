@@ -105,3 +105,4 @@
 - **Splash 삭제** (원하던 느낌과 달라 보류): `splash.ts`·모드 항목 제거, BLOB_COUNT = AMOUNT_RANGE.max로 복귀. 모드는 Move / Cut / Ripple. `npm run build` ✅
 - **좁은 폭 컨트롤 잘림 수정**: 320px에서 패널 내용 376px로 넘침 → 열 최소폭 `min(22rem, 100%)`, 컨트롤 열 `minmax(0, 1fr)`, 모드 버튼 `min-width: 0`, 색상 스와치 줄바꿈 허용. 320/360/1280 넘침 0 + 스크린샷 ✅ `npm run build` ✅
 - **Move 늘어남 + 밀어내기**: 셰이더 `uStretch`로 물방울을 이동 방향 타원(면적 유지)으로 그림, 늘어남 = 속도×0.35(최대 0.7), 형태 스프링 90/s²·ζ0.3이라 놓으면 출렁이며 원형 복귀(다른 모드에서 움직일 때도 적용). 물방울 밖을 누른 채 움직이면 가장자리가 손끝에서 0.14–0.24 떨어질 때까지 비켜남(정지 위치 기준이라 밀다가 힘이 약해지지 않음). 주의: GLSL ES 1.0은 함수 인자로 uniform 배열 인덱싱 불가 → 값을 넘김. 드래그 스크린샷 desktop + mobile ✅ (headless 저fps라 밀림 폭은 실기기 확인 필요) `npm run build` ✅
+- Shadow tightened so blobs sit on the surface: offset (0.025,-0.045)→(0.008,-0.014), blur 0.14→0.05, strength 0.2→0.26. Screenshots desktop + mobile ✅ `npm run build` ✅
