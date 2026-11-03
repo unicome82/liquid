@@ -1,4 +1,4 @@
-export type InteractionMode = 'move' | 'cut' | 'ripple' | 'drop';
+export type InteractionMode = 'move' | 'cut' | 'ripple' | 'splash';
 export type ColorTheme = 'pastel' | 'vivid' | 'water' | 'silver' | 'gold';
 
 export interface LiquidSettings {
@@ -34,7 +34,7 @@ export const INTERACTION_MODES: { value: InteractionMode; label: string; icon: s
   { value: 'move', label: 'Move', icon: 'drag_pan' },
   { value: 'cut', label: 'Cut', icon: 'content_cut' },
   { value: 'ripple', label: 'Ripple', icon: 'waves' },
-  { value: 'drop', label: 'Drop', icon: 'water_drop' },
+  { value: 'splash', label: 'Splash', icon: 'bubble_chart' },
 ];
 
 export const COLOR_THEMES: { value: ColorTheme; label: string }[] = [

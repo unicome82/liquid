@@ -1,10 +1,10 @@
 import { AMOUNT_RANGE } from '../../shared/settings';
 import { CUT_POINTS } from './cut';
-import { MAX_DROPS } from './drop';
+import { MAX_SPLASH_DROPLETS } from './splash';
 import { MAX_RIPPLES } from './ripple';
 
-// Shader arrays are fixed-size, so allocate for the largest amount plus touch-laid drops
-export const BLOB_COUNT = AMOUNT_RANGE.max + MAX_DROPS;
+// Shader arrays are fixed-size, so allocate for the largest amount plus splash droplets
+export const BLOB_COUNT = AMOUNT_RANGE.max + MAX_SPLASH_DROPLETS;
 
 export const VERTEX_SHADER = `
 attribute vec2 aPosition;
