@@ -92,3 +92,4 @@
 - Screenshots desktop Pastel press/pull/cut + mobile Water press/pull ✅ no console errors, `npm run build` ✅
 - Pulled arm looked pointed along its middle and too thin → width 0.06–0.11 (root ×1.4), axis distance rounded (`PULL_ROUND` 0.04) and arm included in the dome radius → round crown. Dent wider (0.045–0.08) and smoother (0.06) so fast strokes leave no sparkly creases. Screenshots desktop press/pull + mobile pull ✅ `npm run build` ✅
 - Pulled arm troughed: the dent continues along the arm (capsule at 50% width, same dent profile) so the dough reads as pressed and drawn out, not domed. Screenshots desktop + mobile pull ✅ `npm run build` ✅
+- **Mold 철회**: still felt off → `src` back to main's Cut (as before, fast stroke = wide groove), Stretch removed entirely (BLOB_COUNT 12). Modes: Attract / Repel / Cut; 4th mode TBD. Screenshots Cut desktop + mobile ✅ no console errors, `npm run build` ✅

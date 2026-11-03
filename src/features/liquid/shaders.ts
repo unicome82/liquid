@@ -23,11 +23,6 @@ uniform vec4 uBlobs[BLOB_COUNT];   // xy: center (scene units), z: radius, w: me
 uniform vec3 uColors[BLOB_COUNT];
 uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove half-width
 uniform int uCutCount;             // live points; the rest of uCuts is unused
-uniform vec3 uDents[CUT_POINTS];   // fingertip press trail, same layout as uCuts
-uniform int uDentCount;
-uniform vec3 uPullRoot;            // xy: dough pulled out of a blob (scene units), z: radius
-uniform vec3 uPullTip;             // z = 0 means nothing is pulled
-uniform vec3 uPullColor;
 uniform vec3 uBgTop;
 uniform vec3 uBgBottom;
 uniform vec3 uBgAccent;
@@ -42,21 +37,6 @@ uniform vec3 uTextColor;
 const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
 const float CUT_SMOOTH = 0.1;
-// Fillet where pulled dough meets its blob; tighter than MERGE_K so it reads as an arm
-const float PULL_MERGE = 0.12;
-const float PULL_ROUND = 0.04;
-// Fingertip dent: full depth this far inside the press, fading out just past its edge
-const float DENT_DEPTH = 0.02;
-const float DENT_BOWL = 0.06;
-const float DENT_RIM = 0.02;
-const float DENT_SMOOTH = 0.06;
-// Trough along a pulled arm, as a share of the arm's width
-const float GROOVE_SCALE = 0.5;
-// Colours closer than this count as one hue, so a blob and its own dough don't read as a seam
-const float COLOR_MATCH = 0.02;
-const float SOLE_HUE = 0.999;
-// Layout blobs plus the pulled dough
-#define COLOR_PARTS ${BLOB_COUNT + 1}
 // Depth of the rounded rim; smaller = flatter, larger = puffier
 const float BEVEL = 0.12;
 // How quickly neighbouring blob colours fade into each other
@@ -155,32 +135,17 @@ float taperedSegmentSdf(vec2 p, vec3 a, vec3 b) {
   return length(pa - ba * h) - mix(a.z, b.z, h);
 }
 
-// smoothing 0 = plain min; above 0 blends the segments so their joints leave no crease
-float trailSdf(vec2 p, vec3 points[CUT_POINTS], int count, float smoothing) {
-  // A press that hasn't moved yet is a single round fingertip
-  if (count == 1) return length(p - points[0].xy) - points[0].z;
+float cutSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < CUT_POINTS - 1; i++) {
     // GLSL ES 1.0 needs a constant bound, so stop at the live count instead
-    if (i + 1 >= count) break;
+    if (i + 1 >= uCutCount) break;
     // Zero width marks an unused slot (or a fully healed point)
-    if (min(points[i].z, points[i + 1].z) <= 0.0) continue;
-    // Plain min keeps the outline seamless (tapered neighbours share radii at each joint),
-    // but its inner ridges catch the light, so shading-only trails blend instead
-    float segment = taperedSegmentSdf(p, points[i], points[i + 1]);
-    d = smoothing > 0.0 ? smin(d, segment, smoothing) : min(d, segment);
+    if (min(uCuts[i].z, uCuts[i + 1].z) <= 0.0) continue;
+    // Plain min is seamless here: tapered neighbours share the same radius at each joint
+    d = min(d, taperedSegmentSdf(p, uCuts[i], uCuts[i + 1]));
   }
   return d;
-}
-
-// Like taperedSegmentSdf, but the distance is rounded off along the axis: a sharp axis
-// shows up as a pointed ridge in the shading, worst on an arm thinner than BEVEL
-float pullSdf(vec2 p) {
-  vec2 pa = p - uPullRoot.xy;
-  vec2 ba = uPullTip.xy - uPullRoot.xy;
-  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
-  vec2 q = pa - ba * h;
-  return sqrt(dot(q, q) + PULL_ROUND * PULL_ROUND) - mix(uPullRoot.z, uPullTip.z, h);
 }
 
 float sceneSdf(vec2 p) {
@@ -189,25 +154,9 @@ float sceneSdf(vec2 p) {
     float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
     d = smin(d, blobSdf(p, uBlobs[i]), k);
   }
-  if (uPullTip.z > 0.0) d = smin(d, pullSdf(p), PULL_MERGE);
   // No groove: skip the carve entirely, it runs for every normal/shadow sample
   if (uCutCount < 2) return d;
-  return smax(d, -trailSdf(p, uCuts, uCutCount, 0.0), CUT_SMOOTH);
-}
-
-// Surface pushed down under the fingertip trail; only shading reads it, the outline stays
-float dentDepth(vec2 p) {
-  float depth = 0.0;
-  if (uDentCount >= 1) {
-    depth = DENT_DEPTH * smoothstep(DENT_RIM, -DENT_BOWL, trailSdf(p, uDents, uDentCount, DENT_SMOOTH));
-  }
-  // The finger that drew the dough out is still pressing it, so the arm is troughed, not domed
-  if (uPullTip.z > 0.0) {
-    vec3 root = vec3(uPullRoot.xy, uPullRoot.z * GROOVE_SCALE);
-    vec3 tip = vec3(uPullTip.xy, uPullTip.z * GROOVE_SCALE);
-    depth = max(depth, DENT_DEPTH * smoothstep(DENT_RIM, -DENT_BOWL, taperedSegmentSdf(p, root, tip)));
-  }
-  return depth;
+  return smax(d, -cutSdf(p), CUT_SMOOTH);
 }
 
 // Circular profile so the rim curves down like a droplet edge
@@ -226,12 +175,6 @@ float localRadius(vec2 p) {
     sum += uBlobs[i].z * w;
     total += w;
   }
-  // The arm domes over its own width, not its blob's, so its crown stays round
-  if (uPullTip.z > 0.0) {
-    float w = exp(-pullSdf(p) * COLOR_SHARPNESS);
-    sum += mix(uPullRoot.z, uPullTip.z, 0.5) * w;
-    total += w;
-  }
   return sum / max(total, 1e-6);
 }
 
@@ -245,34 +188,16 @@ float domeHeight(vec2 p) {
 }
 
 vec3 liquidColor(vec2 p) {
-  float weights[COLOR_PARTS];
-  vec3 colors[COLOR_PARTS];
   vec3 sum = vec3(0.0);
   float total = 0.0;
-  for (int i = 0; i < BLOB_COUNT; i++) {
-    weights[i] = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
-    colors[i] = uColors[i];
-  }
-  weights[BLOB_COUNT] = uPullTip.z > 0.0 ? exp(-pullSdf(p) * COLOR_SHARPNESS) : 0.0;
-  colors[BLOB_COUNT] = uPullColor;
   float maxW = 0.0;
-  for (int i = 0; i < COLOR_PARTS; i++) {
-    sum += colors[i] * weights[i];
-    total += weights[i];
-    maxW = max(maxW, weights[i]);
+  for (int i = 0; i < BLOB_COUNT; i++) {
+    float w = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
+    sum += uColors[i] * w;
+    total += w;
+    maxW = max(maxW, w);
   }
-  // Deep inside a single blob nothing else contributes; skip the pairwise pass below
-  if (maxW / total > SOLE_HUE) return sum / total;
-
-  // Share of weight from a different hue (Gini impurity): 0 inside one colour, 0.5 midway
-  // between two. Overlapping parts of one colour, like a blob and its own dough, stay 0
-  float sameHue = 0.0;
-  for (int i = 0; i < COLOR_PARTS; i++) {
-    for (int j = 0; j < COLOR_PARTS; j++) {
-      if (distance(colors[i], colors[j]) < COLOR_MATCH) sameHue += weights[i] * weights[j];
-    }
-  }
-  float mixAmount = 1.0 - sameHue / (total * total);
+  float mixAmount = 1.0 - maxW / total;
   return mix(sum / total, uTransition, mixAmount * TRANSITION_LIFT);
 }
 
@@ -302,11 +227,9 @@ float flatten(float h, float ceiling) {
 }
 
 vec3 domeNormal(vec2 p, float eps, float ceiling) {
-  vec2 ex = vec2(eps, 0.0);
-  vec2 ey = vec2(0.0, eps);
-  float h = flatten(domeHeight(p), ceiling) - dentDepth(p);
-  float hx = flatten(domeHeight(p + ex), ceiling) - dentDepth(p + ex);
-  float hy = flatten(domeHeight(p + ey), ceiling) - dentDepth(p + ey);
+  float h = flatten(domeHeight(p), ceiling);
+  float hx = flatten(domeHeight(p + vec2(eps, 0.0)), ceiling);
+  float hy = flatten(domeHeight(p + vec2(0.0, eps)), ceiling);
   return normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 }
 
@@ -333,11 +256,9 @@ vec3 shadeWater(vec2 uv, vec3 tint, vec3 n, vec3 l, vec3 halfVec) {
 
 vec3 shadeLiquid(vec2 uv, vec2 p, float d, float px) {
   float eps = NORMAL_SAMPLE_PX * px;
-  vec2 ex = vec2(eps, 0.0);
-  vec2 ey = vec2(0.0, eps);
-  float h = heightFromSdf(d) - dentDepth(p);
-  float hx = heightFromSdf(sceneSdf(p + ex)) - dentDepth(p + ex);
-  float hy = heightFromSdf(sceneSdf(p + ey)) - dentDepth(p + ey);
+  float h = heightFromSdf(d);
+  float hx = heightFromSdf(sceneSdf(p + vec2(eps, 0.0)));
+  float hy = heightFromSdf(sceneSdf(p + vec2(0.0, eps)));
   vec3 n = normalize(vec3(-(hx - h) / eps, -(hy - h) / eps, 1.0));
 
   vec3 l = normalize(LIGHT_DIR);

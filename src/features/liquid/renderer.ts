@@ -1,6 +1,5 @@
 import { backdropFontReady, drawBackdropText } from './backdropText';
 import { CUT_POINTS, type CutPoint } from './cut';
-import type { Pull } from './mold';
 import { isTouchDevice } from './quality';
 import { BLOB_COUNT, FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
 
@@ -32,17 +31,10 @@ export interface Palette {
   text: Rgb;
 }
 
-/** What the mold gesture has done to the liquid this frame */
-export interface Molding {
-  cuts: CutPoint[];
-  dents: CutPoint[];
-  pull: Pull | null;
-}
-
 export interface LiquidRenderer {
   /** @param scale 0–1 resolution multiplier from adaptive quality */
   resize: (scale: number) => void;
-  render: (blobs: Blob[], molding: Molding, palette: Palette) => void;
+  render: (blobs: Blob[], cuts: CutPoint[], palette: Palette) => void;
   dispose: () => void;
 }
 
@@ -113,11 +105,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     colors: gl.getUniformLocation(program, 'uColors'),
     cuts: gl.getUniformLocation(program, 'uCuts'),
     cutCount: gl.getUniformLocation(program, 'uCutCount'),
-    dents: gl.getUniformLocation(program, 'uDents'),
-    dentCount: gl.getUniformLocation(program, 'uDentCount'),
-    pullRoot: gl.getUniformLocation(program, 'uPullRoot'),
-    pullTip: gl.getUniformLocation(program, 'uPullTip'),
-    pullColor: gl.getUniformLocation(program, 'uPullColor'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
     bgAccent: gl.getUniformLocation(program, 'uBgAccent'),
@@ -132,7 +119,6 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const blobData = new Float32Array(BLOB_COUNT * BLOB_STRIDE);
   const colorData = new Float32Array(BLOB_COUNT * STRIDE);
   const cutData = new Float32Array(CUT_POINTS * STRIDE);
-  const dentData = new Float32Array(CUT_POINTS * STRIDE);
 
   // Backdrop copy: drawn on a 2D canvas, uploaded as a texture, redrawn only when the
   // CSS size changes (adaptive quality rescales the GL canvas far more often)
@@ -200,36 +186,21 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   }
 
   // Unused slots get zero width, which the shader skips
-  function packTrail(data: Float32Array, points: CutPoint[]) {
-    data.fill(0);
-    points.slice(0, CUT_POINTS).forEach((point, i) => {
-      data.set([...toScene(point.x, point.y), point.width], i * STRIDE);
+  function packCuts(cuts: CutPoint[]) {
+    cutData.fill(0);
+    cuts.slice(0, CUT_POINTS).forEach((cut, i) => {
+      cutData.set([...toScene(cut.x, cut.y), cut.width], i * STRIDE);
     });
   }
 
-  // Zero tip width tells the shader there is no pull
-  function uploadPull(pull: Pull | null) {
-    if (!pull) {
-      gl!.uniform3f(uniforms.pullTip, 0, 0, 0);
-      return;
-    }
-    gl!.uniform3f(uniforms.pullRoot, ...toScene(pull.root.x, pull.root.y), pull.root.width);
-    gl!.uniform3f(uniforms.pullTip, ...toScene(pull.tip.x, pull.tip.y), pull.tip.width);
-    gl!.uniform3fv(uniforms.pullColor, pull.color);
-  }
-
-  function render(blobs: Blob[], { cuts, dents, pull }: Molding, palette: Palette) {
+  function render(blobs: Blob[], cuts: CutPoint[], palette: Palette) {
     packBlobs(blobs);
-    packTrail(cutData, cuts);
-    packTrail(dentData, dents);
+    packCuts(cuts);
     gl!.uniform2f(uniforms.resolution, canvas.width, canvas.height);
     gl!.uniform4fv(uniforms.blobs, blobData);
     gl!.uniform3fv(uniforms.colors, colorData);
     gl!.uniform3fv(uniforms.cuts, cutData);
     gl!.uniform1i(uniforms.cutCount, Math.min(cuts.length, CUT_POINTS));
-    gl!.uniform3fv(uniforms.dents, dentData);
-    gl!.uniform1i(uniforms.dentCount, Math.min(dents.length, CUT_POINTS));
-    uploadPull(pull);
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);
     gl!.uniform3fv(uniforms.bgAccent, palette.bgAccent);

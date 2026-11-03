@@ -1,7 +1,6 @@
 import type { InteractionMode } from '../../shared/settings';
-import type { CutPoint } from './cut';
+import { CutTrail, type CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
-import { MoldGesture, type Pull } from './mold';
 
 interface Body {
   homeX: number;
@@ -78,7 +77,7 @@ function wave(t: number, phase: number): number {
 
 export class LiquidSimulation {
   private bodies: Body[] = [];
-  private mold = new MoldGesture();
+  private cutTrail = new CutTrail();
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
   /** Freezes the idle drift and pulse; touch still moves the liquid */
@@ -131,17 +130,12 @@ export class LiquidSimulation {
     const ampY = DRIFT_AMPLITUDE * Math.min(1, aspect);
     const radiusBlend = 1 - Math.exp(-RADIUS_RATE * dt);
 
-    // Runs first so a fresh press knows whether it cuts before the field force is applied
-    this.mold.update(dt, pointer, mode === 'mold', intensity, this.bodies, scaleX, scaleY);
-    const field = fieldMode(mode, this.mold.cutting);
-
     for (const body of this.bodies) {
       const t = this.driftClock + body.phase;
       const targetX = body.homeX + ampX * wave(t, body.phase);
       const targetY = body.homeY + ampY * wave(t * DRIFT_Y_FREQ, body.phase + GOLDEN_ANGLE);
 
-      // Pressing moves only the pressed blob, so skip the stir that would drag its neighbours
-      if (pointer.active && field) applyPointer(body, pointer, field, force, scaleX, scaleY, dt);
+      if (pointer.active) applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
       body.vx += ((targetX - body.x) * stiffness - body.vx * damping) * dt;
       body.vy += ((targetY - body.y) * stiffness - body.vy * damping) * dt;
       body.x += body.vx * dt;
@@ -150,6 +144,8 @@ export class LiquidSimulation {
     }
 
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
+
+    this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
   }
 
 
@@ -166,29 +162,13 @@ export class LiquidSimulation {
   }
 
   getCuts(): CutPoint[] {
-    return this.mold.getCuts();
-  }
-
-  getDents(): CutPoint[] {
-    return this.mold.getDents();
-  }
-
-  getPull(): Pull | null {
-    return this.mold.getPull();
+    return this.cutTrail.getPoints();
   }
 
 
 }
 
-/** Pointer field forces; a mold press tugs its own blob instead */
-type FieldMode = 'attract' | 'repel' | 'cut';
-
-function fieldMode(mode: InteractionMode, cutting: boolean): FieldMode | null {
-  if (mode !== 'mold') return mode;
-  return cutting ? 'cut' : null;
-}
-
-function modeDirection(mode: FieldMode, nx: number, ny: number): [number, number] {
+function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, number] {
   switch (mode) {
     case 'attract':
       return [-nx, -ny];
@@ -202,7 +182,7 @@ function modeDirection(mode: FieldMode, nx: number, ny: number): [number, number
 function applyPointer(
   body: Body,
   pointer: PointerInput,
-  mode: FieldMode,
+  mode: InteractionMode,
   force: number,
   scaleX: number,
   scaleY: number,
