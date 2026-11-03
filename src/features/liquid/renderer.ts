@@ -18,6 +18,8 @@ export interface Blob {
   merge?: number;
   /** Connected body of liquid it belongs to; ripples stay within one */
   group?: number;
+  /** Long axis in short-side units (y down); its length is the elongation share */
+  stretch?: [number, number];
 }
 
 export interface Palette {
@@ -50,6 +52,7 @@ const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
 const STRIDE = 3;
 // Blobs carry x, y, radius and merge range
 const BLOB_STRIDE = 4;
+const STRETCH_STRIDE = 2;
 // Tells the shader to fall back to its default merge range
 const DEFAULT_MERGE = 0;
 // Matches no ripple, whose groups start at 0
@@ -113,6 +116,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     ripples: gl.getUniformLocation(program, 'uRipples'),
     rippleCount: gl.getUniformLocation(program, 'uRippleCount'),
     blobGroups: gl.getUniformLocation(program, 'uBlobGroups'),
+    stretch: gl.getUniformLocation(program, 'uStretch'),
     rippleGroups: gl.getUniformLocation(program, 'uRippleGroups'),
     bgTop: gl.getUniformLocation(program, 'uBgTop'),
     bgBottom: gl.getUniformLocation(program, 'uBgBottom'),
@@ -130,6 +134,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   const cutData = new Float32Array(CUT_POINTS * STRIDE);
   const rippleData = new Float32Array(MAX_RIPPLES * BLOB_STRIDE);
   const blobGroupData = new Float32Array(BLOB_COUNT);
+  const stretchData = new Float32Array(BLOB_COUNT * STRETCH_STRIDE);
   const rippleGroupData = new Float32Array(MAX_RIPPLES);
 
   // Backdrop copy: drawn on a 2D canvas, uploaded as a texture, redrawn only when the
@@ -183,6 +188,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
   }
 
   function packBlobs(blobs: Blob[]) {
+    stretchData.fill(0);
     for (let i = 0; i < BLOB_COUNT; i++) {
       const blob = blobs[i];
       if (!blob) {
@@ -195,6 +201,8 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
       );
       colorData.set(blob.color, i * STRIDE);
       blobGroupData[i] = blob.group ?? NO_GROUP;
+      // Short-side units already match scene units; only y flips to point up
+      if (blob.stretch) stretchData.set([blob.stretch[0], -blob.stretch[1]], i * STRETCH_STRIDE);
     }
   }
 
@@ -229,6 +237,7 @@ export function createLiquidRenderer(canvas: HTMLCanvasElement): LiquidRenderer 
     gl!.uniform4fv(uniforms.ripples, rippleData);
     gl!.uniform1i(uniforms.rippleCount, Math.min(ripples.length, MAX_RIPPLES));
     gl!.uniform1fv(uniforms.blobGroups, blobGroupData);
+    gl!.uniform2fv(uniforms.stretch, stretchData);
     gl!.uniform1fv(uniforms.rippleGroups, rippleGroupData);
     gl!.uniform3fv(uniforms.bgTop, palette.bgTop);
     gl!.uniform3fv(uniforms.bgBottom, palette.bgBottom);

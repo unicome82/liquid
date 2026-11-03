@@ -14,6 +14,11 @@ interface Body {
   targetRadius: number;
   color: Rgb;
   phase: number;
+  /** Elongation along its motion, short-side units (direction = long axis, length = share) */
+  stretchX: number;
+  stretchY: number;
+  stretchVx: number;
+  stretchVy: number;
 }
 
 
@@ -66,6 +71,15 @@ const DRAG_REACH = 0.05;
 /** 1/s² — a held drop follows the finger tightly but still lags a touch, like liquid */
 const DRAG_STIFFNESS = 120;
 const DRAG_DAMPING_RATIO = 0.9;
+
+/** Elongation share per short-side unit/s of speed, and the most a drop stretches */
+const STRETCH_PER_SPEED = 0.35;
+const MAX_STRETCH = 0.7;
+/** 1/s² — shape spring; underdamped so a released drop wobbles back to round */
+const STRETCH_STIFFNESS = 90;
+const STRETCH_DAMPING_RATIO = 0.3;
+/** Move mode, pressing off a drop: drops give way until their edge is this far from the pointer */
+const PUSH_CLEARANCE: Span = { min: 0.14, max: 0.24 };
 
 /** Pointer-repel share applied along a cut so the liquid visibly parts */
 const CUT_PUSH = 0.3;
@@ -124,6 +138,10 @@ export class LiquidSimulation {
         targetRadius: blob.radius,
         color: blob.color,
         phase: i * GOLDEN_ANGLE,
+        stretchX: 0,
+        stretchY: 0,
+        stretchVx: 0,
+        stretchVy: 0,
       });
     });
 
@@ -150,6 +168,8 @@ export class LiquidSimulation {
     const radiusBlend = 1 - Math.exp(-RADIUS_RATE * dt);
     this.updateDrag(pointer, mode === 'move', scaleX, scaleY);
     const dragDamping = 2 * Math.sqrt(DRAG_STIFFNESS) * DRAG_DAMPING_RATIO;
+    const isPushing = mode === 'move' && pointer.active && !this.dragged;
+    const clearance = lerp(PUSH_CLEARANCE, intensity);
 
     for (const body of this.bodies) {
       const t = this.driftClock + body.phase;
@@ -169,11 +189,17 @@ export class LiquidSimulation {
         body.vx += ((targetX - body.x) * DRAG_STIFFNESS - body.vx * dragDamping) * dt;
         body.vy += ((targetY - body.y) * DRAG_STIFFNESS - body.vy * dragDamping) * dt;
       } else {
-        body.vx += ((body.homeX + driftX - body.x) * stiffness - body.vx * damping) * dt;
-        body.vy += ((body.homeY + driftY - body.y) * stiffness - body.vy * damping) * dt;
+        const restX = body.homeX + driftX;
+        const restY = body.homeY + driftY;
+        const [pushX, pushY] = isPushing
+          ? pushOffset(restX, restY, body.radius, pointer, clearance, scaleX, scaleY)
+          : [0, 0];
+        body.vx += ((restX + pushX - body.x) * stiffness - body.vx * damping) * dt;
+        body.vy += ((restY + pushY - body.y) * stiffness - body.vy * damping) * dt;
       }
       body.x += body.vx * dt;
       body.y += body.vy * dt;
+      updateStretch(body, scaleX, scaleY, dt);
       body.radius += (body.targetRadius - body.radius) * radiusBlend;
     }
 
@@ -217,6 +243,7 @@ export class LiquidSimulation {
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
       group: this.groupOf(body),
+      stretch: [body.stretchX, body.stretchY] as [number, number],
     }));
   }
 
@@ -229,6 +256,43 @@ export class LiquidSimulation {
   }
 
 
+}
+
+/** Springs the drop's shape toward an ellipse drawn out along its velocity. */
+function updateStretch(body: Body, scaleX: number, scaleY: number, dt: number) {
+  const vx = body.vx * scaleX;
+  const vy = body.vy * scaleY;
+  const speed = Math.hypot(vx, vy);
+  const share = Math.min(speed * STRETCH_PER_SPEED, MAX_STRETCH);
+  const targetX = speed > 0 ? (vx / speed) * share : 0;
+  const targetY = speed > 0 ? (vy / speed) * share : 0;
+  const damping = 2 * Math.sqrt(STRETCH_STIFFNESS) * STRETCH_DAMPING_RATIO;
+  body.stretchVx += ((targetX - body.stretchX) * STRETCH_STIFFNESS - body.stretchVx * damping) * dt;
+  body.stretchVy += ((targetY - body.stretchY) * STRETCH_STIFFNESS - body.stretchVy * damping) * dt;
+  body.stretchX += body.stretchVx * dt;
+  body.stretchY += body.stretchVy * dt;
+}
+
+/**
+ * Offset (viewport fractions) that moves a drop's rest spot out of the pointer's way.
+ * Measured from the rest spot, not the current position, so the shove doesn't fade
+ * as the drop gives way.
+ */
+function pushOffset(
+  restX: number,
+  restY: number,
+  radius: number,
+  pointer: PointerInput,
+  clearance: number,
+  scaleX: number,
+  scaleY: number,
+) {
+  const dx = (restX - pointer.x) * scaleX;
+  const dy = (restY - pointer.y) * scaleY;
+  const centre = Math.hypot(dx, dy);
+  const shove = clearance + radius - centre;
+  if (shove <= 0 || centre === 0) return [0, 0];
+  return [((dx / centre) * shove) / scaleX, ((dy / centre) * shove) / scaleY];
 }
 
 /** Labels each blob with its connected body of liquid (flood fill over touching drops). */

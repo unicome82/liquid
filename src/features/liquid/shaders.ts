@@ -27,6 +27,7 @@ uniform vec3 uCuts[CUT_POINTS];    // xy: trail point (scene units), z: groove h
 uniform int uCutCount;             // live points; the rest of uCuts is unused
 uniform vec4 uRipples[MAX_RIPPLES]; // xy: centre (scene units), z: ring radius, w: amplitude
 uniform int uRippleCount;
+uniform vec2 uStretch[BLOB_COUNT]; // long axis (scene units); its length is the elongation share
 uniform float uBlobGroups[BLOB_COUNT];   // connected body of liquid per blob
 uniform float uRippleGroups[MAX_RIPPLES]; // the body each ring travels through
 uniform vec3 uBgTop;
@@ -43,6 +44,7 @@ uniform vec3 uTextColor;
 const float MERGE_K = 0.28;
 // Rounds the lips of a cut so it reads as parted liquid, not a hard slice
 const float CUT_SMOOTH = 0.1;
+const float STRETCH_EPSILON = 1e-3;
 // Ripple ring: a short wave packet this wide, with crests this far apart
 const float RIPPLE_WIDTH = 0.15;
 const float RIPPLE_WAVELENGTH = 0.14;
@@ -136,8 +138,18 @@ float smin(float a, float b, float k) {
 }
 
 // Takes the blob itself: GLSL ES 1.0 forbids indexing arrays with function params
-float blobSdf(vec2 p, vec4 blob) {
-  return length(p - blob.xy) - blob.z;
+// Ellipse drawn out along uStretch with its area kept, so a moving drop thins as it lengthens
+float blobSdf(vec2 p, vec4 blob, vec2 stretch) {
+  vec2 q = p - blob.xy;
+  float share = length(stretch);
+  if (share < STRETCH_EPSILON) return length(q) - blob.z;
+  vec2 axis = stretch / share;
+  float along = dot(q, axis);
+  float longScale = 1.0 + share;
+  float shortScale = inversesqrt(longScale);
+  q = axis * (along / longScale) + (q - axis * along) / shortScale;
+  // Scaled-circle distance, shrunk by the tighter axis so it never overshoots the edge
+  return (length(q) - blob.z) * shortScale;
 }
 
 float smax(float a, float b, float k) {
@@ -171,7 +183,7 @@ float nearestGroup(vec2 p) {
   float best = 1e5;
   float group = -1.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    float d = blobSdf(p, uBlobs[i]);
+    float d = blobSdf(p, uBlobs[i], uStretch[i]);
     if (d < best) {
       best = d;
       group = uBlobGroups[i];
@@ -198,7 +210,7 @@ float sceneSdf(vec2 p) {
   float d = 1e5;
   for (int i = 0; i < BLOB_COUNT; i++) {
     float k = uBlobs[i].w > 0.0 ? uBlobs[i].w : MERGE_K;
-    d = smin(d, blobSdf(p, uBlobs[i]), k);
+    d = smin(d, blobSdf(p, uBlobs[i], uStretch[i]), k);
   }
   // A passing ring swells and dents the edge too, so the drop moves with the wave
   // Fades out away from the edge, or a crest in open space would raise a stray speck
@@ -220,7 +232,7 @@ float localRadius(vec2 p) {
   float sum = 0.0;
   float total = 0.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    float w = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
+    float w = exp(-blobSdf(p, uBlobs[i], uStretch[i]) * COLOR_SHARPNESS);
     sum += uBlobs[i].z * w;
     total += w;
   }
@@ -241,7 +253,7 @@ vec3 liquidColor(vec2 p) {
   float total = 0.0;
   float maxW = 0.0;
   for (int i = 0; i < BLOB_COUNT; i++) {
-    float w = exp(-blobSdf(p, uBlobs[i]) * COLOR_SHARPNESS);
+    float w = exp(-blobSdf(p, uBlobs[i], uStretch[i]) * COLOR_SHARPNESS);
     sum += uColors[i] * w;
     total += w;
     maxW = max(maxW, w);
