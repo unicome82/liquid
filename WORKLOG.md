@@ -84,3 +84,9 @@
 
 ## 2026-11-03 · Stretch → slime finger
 - Thin snapping strand (sag, pinch, loose drops) replaced by a **finger-wide arm**: 14 segments + tip, radius 0.03–0.04 short-side, reach capped at 0.4, thins 20% at full reach, root flares into the body. Segments chase the root→tip line on springs (wobble); release → underdamped recoil back into the blob (overshoot jiggle), no snap. Merge 0.16 (0.12 left bead dimples). Shader extra slots 9 → 15. Screenshots desktop + mobile hold/recoil/rest ✅ no console errors, `npm run build` ✅
+
+## 2026-11-03 · Cut + Stretch → Mold
+- **Mold** (`mold.ts`, icon `pan_tool`) replaces Cut and Stretch: press outside the liquid → cut (unchanged groove); press on a blob → fingertip dent trail in the surface (shading only, heals over 3 s) + dough pulled past the edge as one tapered capsule (`uPullRoot/Tip`, fillet 0.12), recoils with a soft wobble on release. Slow drag = thick, fast = thin, for cut groove, dent and pull (`strokeWidth`).
+- **Colour fix**: transition lift used `1 - maxW/total`, so overlapping parts of one colour (blob + its own strand) were tinted with the fixed transition colour. Now Gini impurity over hues (pairwise, skipped when one blob dominates) → same colour stays itself, different hues blend as before.
+- Dent ridges caught the specular as stripes → dent trail segments smooth-unioned (0.03), depth 0.02. Stretch's 15 extra blob slots removed (BLOB_COUNT 27 → 12).
+- Screenshots desktop Pastel press/pull/cut + mobile Water press/pull ✅ no console errors, `npm run build` ✅

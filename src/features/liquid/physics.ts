@@ -1,7 +1,7 @@
 import type { InteractionMode } from '../../shared/settings';
-import { CutTrail, type CutPoint } from './cut';
+import type { CutPoint } from './cut';
 import type { Blob, Rgb } from './renderer';
-import { StretchGesture } from './stretch';
+import { MoldGesture, type Pull } from './mold';
 
 interface Body {
   homeX: number;
@@ -78,8 +78,7 @@ function wave(t: number, phase: number): number {
 
 export class LiquidSimulation {
   private bodies: Body[] = [];
-  private cutTrail = new CutTrail();
-  private stretch = new StretchGesture();
+  private mold = new MoldGesture();
   // Advanced by speed × dt so changing intensity never makes phases jump
   private driftClock = 0;
   /** Freezes the idle drift and pulse; touch still moves the liquid */
@@ -132,13 +131,17 @@ export class LiquidSimulation {
     const ampY = DRIFT_AMPLITUDE * Math.min(1, aspect);
     const radiusBlend = 1 - Math.exp(-RADIUS_RATE * dt);
 
+    // Runs first so a fresh press knows whether it cuts before the field force is applied
+    this.mold.update(dt, pointer, mode === 'mold', intensity, this.bodies, scaleX, scaleY);
+    const field = fieldMode(mode, this.mold.cutting);
+
     for (const body of this.bodies) {
       const t = this.driftClock + body.phase;
       const targetX = body.homeX + ampX * wave(t, body.phase);
       const targetY = body.homeY + ampY * wave(t * DRIFT_Y_FREQ, body.phase + GOLDEN_ANGLE);
 
-      // Stretch moves only the grabbed blob, so skip the stir that would drag its neighbours
-      if (pointer.active && mode !== 'stretch') applyPointer(body, pointer, mode, force, scaleX, scaleY, dt);
+      // Pressing moves only the pressed blob, so skip the stir that would drag its neighbours
+      if (pointer.active && field) applyPointer(body, pointer, field, force, scaleX, scaleY, dt);
       body.vx += ((targetX - body.x) * stiffness - body.vx * damping) * dt;
       body.vy += ((targetY - body.y) * stiffness - body.vy * damping) * dt;
       body.x += body.vx * dt;
@@ -147,9 +150,6 @@ export class LiquidSimulation {
     }
 
     this.bodies = this.bodies.filter((b) => b.targetRadius > 0 || b.radius > RADIUS_EPSILON);
-
-    this.cutTrail.update(dt, pointer, mode === 'cut', intensity, scaleX, scaleY);
-    this.stretch.update(dt, pointer, mode === 'stretch', intensity, this.bodies, scaleX, scaleY);
   }
 
 
@@ -162,17 +162,33 @@ export class LiquidSimulation {
         (1 + RADIUS_PULSE * Math.sin(this.driftClock * RADIUS_PULSE_FREQ + body.phase)),
       color: body.color,
     }));
-    return [...bodies, ...this.stretch.getBlobs()];
+    return bodies;
   }
 
   getCuts(): CutPoint[] {
-    return this.cutTrail.getPoints();
+    return this.mold.getCuts();
+  }
+
+  getDents(): CutPoint[] {
+    return this.mold.getDents();
+  }
+
+  getPull(): Pull | null {
+    return this.mold.getPull();
   }
 
 
 }
 
-function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, number] {
+/** Pointer field forces; a mold press tugs its own blob instead */
+type FieldMode = 'attract' | 'repel' | 'cut';
+
+function fieldMode(mode: InteractionMode, cutting: boolean): FieldMode | null {
+  if (mode !== 'mold') return mode;
+  return cutting ? 'cut' : null;
+}
+
+function modeDirection(mode: FieldMode, nx: number, ny: number): [number, number] {
   switch (mode) {
     case 'attract':
       return [-nx, -ny];
@@ -180,16 +196,13 @@ function modeDirection(mode: InteractionMode, nx: number, ny: number): [number, 
       return [nx, ny];
     case 'cut':
       return [nx * CUT_PUSH, ny * CUT_PUSH];
-    case 'stretch':
-      // The stretch gesture tugs its own blob; no field force
-      return [0, 0];
   }
 }
 
 function applyPointer(
   body: Body,
   pointer: PointerInput,
-  mode: InteractionMode,
+  mode: FieldMode,
   force: number,
   scaleX: number,
   scaleY: number,

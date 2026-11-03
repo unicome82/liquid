@@ -12,7 +12,7 @@ interface TrailPoint extends CutPoint {
   age: number;
 }
 
-interface Span {
+export interface Span {
   min: number;
   max: number;
 }
@@ -27,14 +27,28 @@ export const CUT_POINTS = TRAIL_POINTS * SUBDIVISIONS + 1;
 const SPACING = 0.04;
 // A larger jump means a new stroke (e.g. a second finger); don't bridge it with a groove
 const MAX_JUMP = 0.3;
-/** Seconds until the groove has fully closed up */
-const LIFETIME = 0.9;
-// Wider than the visible groove: the rounded lips (CUT_SMOOTH in the shader) eat into it
-const WIDTH: Span = { min: 0.02, max: 0.06 };
+export interface TrailOptions {
+  /** Seconds until a point has fully healed */
+  lifetime: number;
+  /** Half-width from fast (min) to slow (max) strokes, short-side units */
+  width: Span;
+}
+
+export const CUT_TRAIL: TrailOptions = {
+  lifetime: 0.9,
+  // Wider than the visible groove: the rounded lips (CUT_SMOOTH in the shader) eat into it
+  width: { min: 0.02, max: 0.06 },
+};
 const WIDTH_INTENSITY: Span = { min: 0.6, max: 1.4 };
 const FULL_SPEED = 2;
 
 const lerp = (span: Span, t: number) => span.min + (span.max - span.min) * t;
+
+/** Wide when the pointer moves slowly, thin when it moves fast */
+export function strokeWidth(width: Span, pointer: PointerInput, scaleX: number, scaleY: number) {
+  const speed = Math.hypot(pointer.vx * scaleX, pointer.vy * scaleY);
+  return lerp(width, 1 - Math.min(speed / FULL_SPEED, 1));
+}
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // Catmull-Rom: passes through p1 and p2 with tangents from their neighbours
@@ -77,9 +91,11 @@ function subdivide(points: CutPoint[]): CutPoint[] {
   return out;
 }
 
-/** Records the pointer's path as a tapering groove that heals over time. */
+/** Records the pointer's path as a tapering trail that heals over time. */
 export class CutTrail {
   private points: TrailPoint[] = [];
+
+  constructor(private options: TrailOptions = CUT_TRAIL) {}
   /** Follows the pointer between recorded points so the groove grows smoothly, not in steps */
   private tip: CutPoint | null = null;
 
@@ -92,7 +108,7 @@ export class CutTrail {
     scaleY: number,
   ) {
     for (const point of this.points) point.age += dt;
-    this.points = this.points.filter((point) => point.age < LIFETIME);
+    this.points = this.points.filter((point) => point.age < this.options.lifetime);
     if (!isCutting || !pointer.active) {
       // Keep where the stroke actually ended instead of snapping back to the last point
       if (this.tip) this.record(this.tip);
@@ -101,9 +117,9 @@ export class CutTrail {
     }
     if (pointer.tapped) this.points = [];
 
-    const speed = Math.hypot(pointer.vx * scaleX, pointer.vy * scaleY);
+    // Slow strokes press in wide, quick flicks leave a thin line, like a brush
     const width =
-      lerp(WIDTH, Math.min(speed / FULL_SPEED, 1)) * lerp(WIDTH_INTENSITY, intensity);
+      strokeWidth(this.options.width, pointer, scaleX, scaleY) * lerp(WIDTH_INTENSITY, intensity);
     this.tip = { x: pointer.x, y: pointer.y, width };
 
     const last = this.points[this.points.length - 1];
@@ -125,7 +141,7 @@ export class CutTrail {
     const points: CutPoint[] = this.points.map(({ x, y, width, age }) => ({
       x,
       y,
-      width: width * (1 - age / LIFETIME) ** 2,
+      width: width * (1 - age / this.options.lifetime) ** 2,
     }));
     if (this.tip) points.push(this.tip);
     return subdivide(smoothWidths(points));
